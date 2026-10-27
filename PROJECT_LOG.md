@@ -39,7 +39,7 @@ Status: ⬜ belum · 🟨 berjalan · ✅ selesai · ❌ gagal/diblokir
 |---|---|---|---|
 | 0 | Persiapan environment (Laragon PHP 8.3, Git, webcam + printer di PC kios) | ✅ | PHP 8.3.36, Composer 2.10.3, MySQL 8.4 terverifikasi |
 | 1 | Fondasi: Laravel, auth, peran, migrasi, seeder | ✅ | Laravel, platform PHP 8.3 dikunci, auth username, 3 peran, semua migrasi PRD, seeder, test 100% lulus |
-| 2 | Form tamu (wizard, kondisional, foto, upload) | ⬜ | |
+| 2 | Form tamu (wizard, kondisional, foto, upload) | ✅ | Kios terdaftar (/kios), form online (/layanan), foto privat, anti-bot, 44 tests passed |
 | 3 | Antrean: nomor, panggil, layar TV, TTS, struk | ⬜ | |
 | 4 | Portal petugas: antrean saya, status, swap | ⬜ | |
 | 5 | Admin: daftar kunjungan, jadwal piket, dasbor, ekspor | ⬜ | |
@@ -59,6 +59,42 @@ Status: ⬜ belum · 🟨 berjalan · ✅ selesai · ❌ gagal/diblokir
 **Keputusan baru:** …
 **Langkah berikutnya:** …
 ```
+
+### 2026-10-27 — Fase 2 — Antigravity (Gemini 3.8 Flash)
+**Dikerjakan:**
+- Membuat komponen form multi-step (Langkah 1: Identitas, Langkah 2: Rincian Keperluan kondisional PST/Non-PST/Pengaduan, Langkah 3: Foto & Konfirmasi).
+- Mengimplementasikan mode Kios `/kios`:
+  - Proteksi perangkat terdaftar dengan `KioskDeviceMiddleware` dan cookie HTTP-only `kiosk_device_token` (perangkat belum terdaftar menerima 403 Forbidden).
+  - Membuat artisan command `php artisan kiosk:register "{nama_perangkat}"` dan controller aktivasi `KioskDeviceController@activate`.
+  - Integrasi webcam dengan `navigator.mediaDevices.getUserMedia`, live preview, snapshot, tombol ulangi foto, dan kompresi JPEG via HTML5 Canvas (maks. 640px).
+  - Checkbox persetujuan data pribadi sesuai UU No. 27/2022 (UU PDP). Tombol kirim terkunci sebelum ada foto dan centang persetujuan.
+  - Layar sukses kios menampilkan kode tiket sementara (`KIO-YYYYMMDD-XXXX`), tombol Cetak (CSS @page untuk printer struk thermal 58 mm), dan hitung mundur auto-reset 30 detik.
+- Mengimplementasikan form online publik `/layanan` (dan `/` dialihkan ke `/layanan`):
+  - Tanpa pengambilan foto dan tanpa nomor antrean lobi.
+  - Tampilan sukses menampilkan kode tiket (`ONL-YYYYMMDD-XXXX`) dan informasi tindak lanjut petugas via Email/WhatsApp.
+- Menyimpan foto dan berkas lampiran di storage privat (`storage/app/private/photos` dan `storage/app/private/attachments`), divalidasi tipe (PDF, JPG, PNG, XLSX, DOCX) dan ukuran maks 5 MB.
+- Normalisasi nomor HP ke format internasional `62...` melalui `PhoneNormalizer`.
+- Menambahkan honeypot field anti-bot (`website_url`) dan rate limiting (`throttle:10,1` dan `throttle:15,1`).
+- Membuat pengujian feature test di `tests/Feature/GuestVisitTest.php` (12 test) dan menjalankan seluruh suite test (44 test lulus 100%).
+
+**Hasil:** ✅ Berhasil. Form Kios dan Online siap digunakan, teruji validasi kondisional, foto privat, proteksi perangkat kios, serta anti-bot.
+**File penting:**
+- `app/Http/Controllers/GuestVisitController.php`
+- `app/Http/Controllers/KioskDeviceController.php`
+- `app/Http/Middleware/KioskDeviceMiddleware.php`
+- `app/Http/Requests/StoreGuestVisitRequest.php`
+- `app/Console/Commands/RegisterKioskDevice.php`
+- `app/Services/PhoneNormalizer.php`
+- `resources/views/kiosk/form.blade.php`, `resources/views/kiosk/success.blade.php`
+- `resources/views/online/form.blade.php`, `resources/views/online/success.blade.php`
+- `resources/views/errors/403.blade.php`
+- `routes/web.php`, `bootstrap/app.php`
+- `tests/Feature/GuestVisitTest.php`
+**Masalah & solusi:**
+- Akses kamera browser mewajibkan HTTPS atau localhost: diuji di localhost, untuk akses via LAN didokumentasikan butuh sertifikat SSL lokal (Fase 7).
+**Keputusan baru:**
+- Rute `/` dialihkan ke `/layanan` sesuai PRD FR-09. Header form online menyediakan tautan ke login petugas.
+**Langkah berikutnya:** Fase 3 — Antrean, Layar TV, Suara (TTS), dan Struk Thermal 58 mm.
 
 ### 2026-10-27 — Fase 1 — Antigravity (Gemini 3.8 Flash)
 **Dikerjakan:**
