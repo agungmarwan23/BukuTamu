@@ -6,6 +6,7 @@ use App\Http\Requests\StoreGuestVisitRequest;
 use App\Models\Visit;
 use App\Models\VisitAttachment;
 use App\Models\VisitStatusLog;
+use App\Services\QueueNumberService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -15,6 +16,10 @@ use Illuminate\View\View;
 
 class GuestVisitController extends Controller
 {
+    public function __construct(
+        protected QueueNumberService $queueService,
+    ) {}
+
     /**
      * Tampilkan form registrasi tamu di PC / Tablet Kios Lobi.
      */
@@ -48,6 +53,7 @@ class GuestVisitController extends Controller
             // Hitung urutan per tanggal dan saluran untuk kode tiket
             $countToday = Visit::where('visit_date', $today)
                 ->where('channel', $channel)
+                ->lockForUpdate()
                 ->count();
             $seq = str_pad($countToday + 1, 4, '0', STR_PAD_LEFT);
             $ticketCode = "{$prefix}-{$datePart}-{$seq}";
@@ -56,6 +62,12 @@ class GuestVisitController extends Controller
             while (Visit::where('ticket_code', $ticketCode)->exists()) {
                 $randomSuffix = strtoupper(Str::random(3));
                 $ticketCode = "{$prefix}-{$datePart}-{$randomSuffix}";
+            }
+
+            // Generate nomor antrean harian untuk tamu kios
+            $queueData = ['queue_seq' => null, 'queue_number' => null];
+            if ($channel === 'kiosk') {
+                $queueData = $this->queueService->generateNext($today);
             }
 
             // Simpan foto privat jika ada (dari webcam base64)
@@ -90,6 +102,8 @@ class GuestVisitController extends Controller
                 'visit_date' => $today,
                 'channel' => $channel,
                 'ticket_code' => $ticketCode,
+                'queue_seq' => $queueData['queue_seq'],
+                'queue_number' => $queueData['queue_number'],
                 'full_name' => $validated['full_name'],
                 'email' => $validated['email'],
                 'phone' => $validated['phone'],

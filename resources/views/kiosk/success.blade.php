@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
-    <title>Tiket Tamu Kios &bull; {{ $visit->ticket_code }}</title>
+    <title>Tiket Antrean &bull; {{ $visit->queue_number ?? $visit->ticket_code }}</title>
 
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700,800&display=swap" rel="stylesheet" />
@@ -68,13 +68,28 @@
             </div>
 
             <h2 class="text-2xl font-extrabold text-slate-900">Registrasi Berhasil!</h2>
-            <p class="text-xs text-slate-500 mt-1">Nomor tiket pendaftaran kunjungan Anda:</p>
 
-            <!-- Kode Tiket Besar -->
-            <div class="my-6 px-8 py-5 rounded-2xl bg-slate-50 border-2 border-blue-900 text-blue-900 shadow-inner">
-                <div class="text-xs uppercase tracking-widest text-slate-500 font-semibold mb-1">KODE TIKET KUNJUNGAN</div>
-                <div class="text-3xl sm:text-4xl font-black tracking-tight font-mono">{{ $visit->ticket_code }}</div>
-            </div>
+            @if($visit->queue_number)
+                {{-- Nomor Antrean Besar (elemen utama) --}}
+                <p class="text-xs text-slate-500 mt-1">Nomor antrean Anda:</p>
+                <div class="my-6 px-10 py-6 rounded-2xl bg-gradient-to-br from-blue-900 to-blue-800 text-white shadow-xl shadow-blue-900/30">
+                    <div class="text-xs uppercase tracking-widest text-blue-200 font-semibold mb-1">NOMOR ANTREAN</div>
+                    <div class="text-5xl sm:text-6xl font-black tracking-tight font-mono">{{ $visit->queue_number }}</div>
+                </div>
+
+                {{-- Kode Tiket Kecil (referensi) --}}
+                <div class="px-4 py-2 rounded-lg bg-slate-50 border border-slate-200 inline-flex items-center gap-2 mb-4">
+                    <span class="text-[11px] text-slate-500">Kode Tiket:</span>
+                    <span class="text-sm font-bold font-mono text-slate-700">{{ $visit->ticket_code }}</span>
+                </div>
+            @else
+                {{-- Fallback jika nomor antrean tidak ada (seharusnya tidak terjadi untuk kios) --}}
+                <p class="text-xs text-slate-500 mt-1">Nomor tiket pendaftaran kunjungan Anda:</p>
+                <div class="my-6 px-8 py-5 rounded-2xl bg-slate-50 border-2 border-blue-900 text-blue-900 shadow-inner">
+                    <div class="text-xs uppercase tracking-widest text-slate-500 font-semibold mb-1">KODE TIKET KUNJUNGAN</div>
+                    <div class="text-3xl sm:text-4xl font-black tracking-tight font-mono">{{ $visit->ticket_code }}</div>
+                </div>
+            @endif
 
             <!-- Detail Singkat -->
             <div class="w-full text-left text-xs bg-slate-50 rounded-xl p-4 border border-slate-100 space-y-2 mb-6">
@@ -124,10 +139,20 @@
             <div style="font-size: 9px;">Jl. Veteran No. 1, Tembilahan</div>
         </div>
 
-        <div style="text-align: center; margin: 8px 0;">
-            <div style="font-size: 10px;">KODE TIKET:</div>
-            <div style="font-size: 16px; font-weight: bold;">{{ $visit->ticket_code }}</div>
-        </div>
+        @if($visit->queue_number)
+            <div style="text-align: center; margin: 8px 0;">
+                <div style="font-size: 10px;">NOMOR ANTREAN:</div>
+                <div style="font-size: 28px; font-weight: bold; letter-spacing: 2px;">{{ $visit->queue_number }}</div>
+            </div>
+            <div style="text-align: center; font-size: 9px; border-bottom: 1px dashed #000; padding-bottom: 4px; margin-bottom: 4px;">
+                Kode: {{ $visit->ticket_code }}
+            </div>
+        @else
+            <div style="text-align: center; margin: 8px 0;">
+                <div style="font-size: 10px;">KODE TIKET:</div>
+                <div style="font-size: 16px; font-weight: bold;">{{ $visit->ticket_code }}</div>
+            </div>
+        @endif
 
         <div style="border-top: 1px dashed #000; padding-top: 4px; margin-top: 4px; font-size: 10px;">
             <div>Nama: {{ Str::limit($visit->full_name, 22) }}</div>
@@ -146,6 +171,12 @@
     <footer class="no-print bg-slate-900/90 text-center py-3 text-xs text-slate-400 border-t border-white/5">
         &copy; {{ date('Y') }} Badan Pusat Statistik Kabupaten Indragiri Hilir
     </footer>
+
+    {{-- Dokumentasi: Chrome --kiosk-printing
+         Untuk melewati dialog cetak di PC kios, jalankan Chrome:
+         chrome.exe --kiosk --kiosk-printing http://localhost:8000/kios
+         Ini akan langsung mencetak tanpa dialog konfirmasi.
+    --}}
 
     <script>
         function printReceipt() {

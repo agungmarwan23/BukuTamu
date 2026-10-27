@@ -40,7 +40,7 @@ Status: ⬜ belum · 🟨 berjalan · ✅ selesai · ❌ gagal/diblokir
 | 0 | Persiapan environment (Laragon PHP 8.3, Git, webcam + printer di PC kios) | ✅ | PHP 8.3.36, Composer 2.10.3, MySQL 8.4 terverifikasi |
 | 1 | Fondasi: Laravel, auth, peran, migrasi, seeder | ✅ | Laravel, platform PHP 8.3 dikunci, auth username, 3 peran, semua migrasi PRD, seeder, test 100% lulus |
 | 2 | Form tamu (wizard, kondisional, foto, upload) | ✅ | Kios terdaftar (/kios), form online (/layanan), foto privat, anti-bot, 44 tests passed |
-| 3 | Antrean: nomor, panggil, layar TV, TTS, struk | ⬜ | |
+| 3 | Antrean: nomor, panggil, layar TV, TTS, struk | ✅ | Nomor reset harian PST-01, dasbor resepsionis, polling layar TV + TTS, cetak struk 58mm, 60 tests passed |
 | 4 | Portal petugas: antrean saya, status, swap | ⬜ | |
 | 5 | Admin: daftar kunjungan, jadwal piket, dasbor, ekspor | ⬜ | |
 | 6 | Notifikasi: pengingat petugas, tautan SKM | ⬜ | |
@@ -59,6 +59,45 @@ Status: ⬜ belum · 🟨 berjalan · ✅ selesai · ❌ gagal/diblokir
 **Keputusan baru:** …
 **Langkah berikutnya:** …
 ```
+
+### 2026-10-27 — Fase 3 — Antigravity (Gemini 3.8 Flash)
+**Dikerjakan:**
+- Membuat `QueueNumberService` untuk penomoran antrean berurutan otomatis (PST-01, PST-02, ... PST-99, PST-100) yang reset per hari menggunakan locking transaksi database.
+- Mengintegrasikan penomoran antrean pada alur simpan kunjungan kios (`GuestVisitController`).
+- Membuat dasbor antrean resepsionis `/resepsionis` dengan fitur:
+  - Ringkasan statistik antrean (total, menunggu, dipanggil, dilayani, selesai, tidak hadir).
+  - Aksi Panggil (dengan pilihan Loket 1 / Loket 2 / Loket 3), Panggil Ulang (recall), dan Lewati (skip/tidak hadir).
+  - Pencatatan otomatis ke `call_events` dan `visit_status_logs`.
+  - Polling live status antrean setiap 3 detik via Alpine.js (`/resepsionis/data`).
+- Mengembangkan halaman publik Layar TV Antrean `/layar`:
+  - Polling API `/api/layar` setiap 3 detik (tanpa WebSocket/Redis sesuai batasan cPanel).
+  - Menampilkan nomor antrean sedang dipanggil berukuran besar + nomor loket.
+  - Menampilkan 5 riwayat panggilan terakhir dan jumlah antrean menunggu.
+  - Privasi terjaga: API dan layar TV sama sekali tidak memuat data pribadi tamu (nama, no HP, email).
+  - Suara panggilan otomatis menggunakan Web Speech API (TTS bahasa Indonesia) dengan fallback audio chime sintesis Web Audio API jika suara browser belum aktif/interaksi awal.
+- Pembaruan tampilan struk thermal 58 mm di `/kios/sukses/{ticket_code}`:
+  - Menampilkan nomor antrean utama (contoh: PST-01) dalam font besar dan kode tiket sebagai referensi.
+  - Format cetak thermal rapi dengan instruksi menunggu pemanggilan.
+- Menulis pengujian unit dan fitur di `tests/Feature/QueueTest.php` (16 test), serta membuat `VisitFactory`.
+- Memvalidasi seluruh test suite (60 test, 189 assertions lulus 100%) dan build aset front-end via `npm run build`.
+
+**Hasil:** ✅ Berhasil. Fitur antrean kios, pemanggilan resepsionis, layar TV + TTS bahasa Indonesia, dan struk thermal 58 mm siap digunakan.
+**File penting:**
+- `app/Services/QueueNumberService.php`
+- `app/Http/Controllers/QueueController.php`
+- `app/Http/Controllers/GuestVisitController.php`
+- `resources/views/resepsionis/dashboard.blade.php`
+- `resources/views/layar/index.blade.php`
+- `resources/views/kiosk/success.blade.php`
+- `routes/web.php`
+- `database/factories/VisitFactory.php`
+- `tests/Feature/QueueTest.php`
+**Masalah & solusi:**
+- Pada pengujian SQLite in-memory, query tanggal `where('visit_date', $today)` sempat tidak cocok dengan casting datetime: diselesaikan menggunakan `whereDate('visit_date', $today)` sehingga kompatibel baik di SQLite maupun MySQL cPanel.
+- Di browser modern, Web Speech API (suara) membutuhkan interaksi klik pengguna pertama kali (autoplay policy): layar TV menyediakan tombol interaktif "Aktifkan Suara" yang jelas bagi petugas saat monitor TV dinyalakan.
+**Keputusan baru:**
+- Layar TV antrean publik `/layar` dan API `/api/layar` dapat diakses tanpa autentikasi agar dapat langsung dibuka pada Smart TV / browser monitor di lobi.
+**Langkah berikutnya:** Fase 4 — Portal Petugas (Antrean Saya, Catatan Konsultasi, Ubah Status Dilayani/Selesai, dan Fitur Swap Piket).
 
 ### 2026-10-27 — Fase 2 — Antigravity (Gemini 3.8 Flash)
 **Dikerjakan:**

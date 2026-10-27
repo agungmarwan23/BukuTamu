@@ -36,5 +36,7 @@
         <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-500">
             &copy; {{ date('Y') }} Badan Pusat Statistik Kabupaten Indragiri Hilir &bull; Sistem Buku Tamu & Antrean Layanan
         </footer>
+
+        @stack('scripts')
     </body>
 </html>

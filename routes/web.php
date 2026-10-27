@@ -3,6 +3,7 @@
 use App\Http\Controllers\GuestVisitController;
 use App\Http\Controllers\KioskDeviceController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\QueueController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -36,6 +37,12 @@ Route::middleware('kiosk.device')->prefix('kios')->name('kios.')->group(function
     Route::get('/sukses/{ticket_code}', [GuestVisitController::class, 'kioskSuccess'])->name('success');
 });
 
+// Layar TV Antrean (publik, read-only) — FR-12
+Route::get('/layar', [QueueController::class, 'screen'])->name('layar');
+
+// API Publik Layar TV (polling tiap 3 detik) — FR-13
+Route::get('/api/layar', [QueueController::class, 'screenApi'])->name('api.layar');
+
 // Redirect Dasbor Berdasarkan Peran
 Route::get('/dashboard', function () {
     $user = Auth::user();
@@ -54,10 +61,13 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     })->name('dashboard');
 });
 
+// Resepsionis — Antrean (FR-11)
 Route::middleware(['auth', 'role:resepsionis,admin'])->prefix('resepsionis')->name('resepsionis.')->group(function () {
-    Route::get('/', function () {
-        return view('resepsionis.dashboard');
-    })->name('dashboard');
+    Route::get('/', [QueueController::class, 'index'])->name('dashboard');
+    Route::post('/panggil/{visit}', [QueueController::class, 'call'])->name('call');
+    Route::post('/ulang/{visit}', [QueueController::class, 'recall'])->name('recall');
+    Route::post('/lewati/{visit}', [QueueController::class, 'skip'])->name('skip');
+    Route::get('/api/antrean', [QueueController::class, 'queueData'])->name('api.queue');
 });
 
 Route::middleware(['auth', 'role:petugas,admin'])->prefix('petugas')->name('petugas.')->group(function () {
@@ -74,3 +84,4 @@ Route::middleware('auth')->group(function () {
 });
 
 require __DIR__.'/auth.php';
+
