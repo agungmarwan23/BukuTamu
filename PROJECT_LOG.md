@@ -42,7 +42,7 @@ Status: ⬜ belum · 🟨 berjalan · ✅ selesai · ❌ gagal/diblokir
 | 2 | Form tamu (wizard, kondisional, foto, upload) | ✅ | Kios terdaftar (/kios), form online (/layanan), foto privat, anti-bot, 44 tests passed |
 | 3 | Antrean: nomor, panggil, layar TV, TTS, struk | ✅ | Nomor reset harian PST-01, dasbor resepsionis, polling layar TV + TTS, cetak struk 58mm, 60 tests passed |
 | 4 | Portal petugas: antrean saya, status, swap | ✅ | Antrean saya, alur Mulai Layani & Selesai + catatan, permintaan online, swap tanpa ubah jadwal asli, 75 tests passed |
-| 5 | Admin: daftar kunjungan, jadwal piket, dasbor, ekspor | ⬜ | |
+| 5 | Admin: daftar kunjungan, jadwal piket, dasbor, ekspor | ✅ | Dasbor Chart.js lokal, daftar + filter + detail audit trail, ekspor CSV, penugasan massal bulanan, analitik swap, kelola akun & kios, 90 tests passed |
 | 6 | Notifikasi: pengingat petugas, tautan SKM | ⬜ | |
 | 7 | Hardening, tes, HTTPS LAN, dokumentasi | ⬜ | |
 | 8 | Deploy cPanel | ⬜ | |
@@ -59,6 +59,59 @@ Status: ⬜ belum · 🟨 berjalan · ✅ selesai · ❌ gagal/diblokir
 **Keputusan baru:** …
 **Langkah berikutnya:** …
 ```
+
+### 2026-10-27 — Fase 5 — Antigravity (Gemini 3.8 Flash)
+**Dikerjakan:**
+- Mengembangkan Panel Administrator lengkap (`/admin`):
+  - **Dasbor Eksekutif (`/admin`)**:
+    - Kartu metrik: kunjungan hari ini, 7 hari terakhir, bulan ini, tiket aktif belum selesai, rata-rata waktu tunggu (menit), dan rata-rata waktu layanan (menit).
+    - Visualisasi grafik interaktif menggunakan **Chart.js lokal** (di-bundle via npm/Vite tanpa CDN eksternal): grafik batang tren 7 hari (kios vs online) dan grafik donat distribusi jenis layanan PST.
+    - Widget ringkasan petugas piket hari ini dan 5 riwayat swap terbaru.
+  - **Daftar Kunjungan & Detail (`/admin/kunjungan`) (FR-30)**:
+    - Filter komprehensif: rentang tanggal, saluran (kios/online), tujuan (PST/Non-PST/Pengaduan), status, petugas, dan pencarian kata kunci.
+    - Halaman detail kunjungan (`/admin/kunjungan/{visit}`): foto privat, lampiran berkas, data identitas, persetujuan UU PDP, catatan layanan, dan jejak audit transisi status lengkap (`visit_status_logs`).
+  - **Ekspor CSV Native (`/admin/kunjungan/ekspor`) (FR-34)**:
+    - Ekspor berkecepatan tinggi dengan streaming chunking dan header UTF-8 BOM (`\xEF\xBB\xBF`) agar langsung terbaca rapi di Microsoft Excel. Filter aktif pada halaman diterapkan otomatis pada hasil ekspor.
+  - **CRUD Jadwal Piket & Penugasan Massal (`/admin/jadwal`) (FR-32)**:
+    - Navigasi jadwal per bulan dan tahun.
+    - Form penugasan harian.
+    - Fitur **Penugasan Massal Bulanan (Rotasi Otomatis)**: mendistribusikan piket secara round-robin merata ke petugas terpilih khusus untuk hari kerja (Senin s.d. Jumat), dengan opsi timpa (overwrite).
+    - Hapus jadwal harian.
+  - **Analitik Swap Piket (`/admin/analitik-swap`) (FR-33)**:
+    - Peringkat petugas yang paling sering digantikan (swap out) dan paling sering menggantikan (swap in) pada periode tertentu.
+    - Tabel riwayat swap lengkap dengan alasan dan penanggung jawab.
+  - **Kelola Akun Pengguna (`/admin/pengguna`) (FR-35)**:
+    - Daftar akun, tambah akun baru (admin, resepsionis, petugas) dengan validasi username unik & kata sandi.
+    - Toggle aktif / nonaktif akun (dengan proteksi agar admin tidak menonaktifkan akun sendiri).
+    - Reset kata sandi pengguna langsung dari admin.
+  - **Kelola Perangkat Kios (`/admin/perangkat`) (FR-01)**:
+    - Pendaftaran perangkat PC kios baru, pembuatan token rahasia acak 40 karakter, dan tampilan URL aktivasi instan untuk disalin ke PC lobi.
+    - Toggle status aktif dan hapus perangkat kios.
+- Menulis pengujian unit dan fitur lengkap di `tests/Feature/AdminTest.php` (15 test): validasi otorisasi peran admin, filter kunjungan, ekspor CSV, penugasan massal bulanan, analitik swap, manajemen user, dan aktivasi kios.
+- Menjalankan seluruh test suite (**90 test lulus 100%, 297 assertions**) dan build aset CSS/JS front-end via `npm run build`.
+
+**Hasil:** ✅ Berhasil. Seluruh modul administrasi (Dasbor, Kunjungan, Jadwal, Analitik Swap, Pengguna, Perangkat Kios, dan Ekspor) berfungsi penuh dan teruji.
+**File penting:**
+- `app/Http/Controllers/Admin/DashboardController.php`
+- `app/Http/Controllers/Admin/VisitController.php`
+- `app/Http/Controllers/Admin/DutyScheduleController.php`
+- `app/Http/Controllers/Admin/SwapAnalyticsController.php`
+- `app/Http/Controllers/Admin/UserController.php`
+- `app/Http/Controllers/Admin/KioskDeviceManageController.php`
+- `resources/views/admin/dashboard.blade.php`
+- `resources/views/admin/visits/index.blade.php`, `resources/views/admin/visits/show.blade.php`
+- `resources/views/admin/schedules/index.blade.php`
+- `resources/views/admin/analytics/swaps.blade.php`
+- `resources/views/admin/users/index.blade.php`
+- `resources/views/admin/kiosk_devices/index.blade.php`
+- `resources/views/layouts/navigation.blade.php`
+- `routes/web.php`
+- `tests/Feature/AdminTest.php`
+**Masalah & solusi:**
+- Chart.js dipasang secara lokal melalui `npm install chart.js` dan di-bundle ke file JavaScript lokal aplikasi via Vite, memenuhi standar kompatibilitas cPanel tanpa mengandalkan CDN pihak ketiga yang berisiko terblokir atau lambat.
+**Keputusan baru:**
+- Ekspor file menggunakan format CSV native dengan UTF-8 BOM dan delimiter titik koma (`;`), kompatibel langsung dengan Microsoft Excel regional Indonesia/internasional tanpa perlu library eksternal yang membebani memori server cPanel.
+**Langkah berikutnya:** Fase 6 — Notifikasi: NotificationService dengan driver log, mail, dan WhatsApp, command pengingat piket jam 07:00, pengiriman tautan SKM saat tiket selesai.
 
 ### 2026-10-27 — Fase 4 — Antigravity (Gemini 3.8 Flash)
 **Dikerjakan:**

@@ -1,5 +1,11 @@
 <?php
 
+use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Admin\DutyScheduleController as AdminDutyScheduleController;
+use App\Http\Controllers\Admin\KioskDeviceManageController as AdminKioskDeviceController;
+use App\Http\Controllers\Admin\SwapAnalyticsController as AdminSwapAnalyticsController;
+use App\Http\Controllers\Admin\UserController as AdminUserController;
+use App\Http\Controllers\Admin\VisitController as AdminVisitController;
 use App\Http\Controllers\GuestVisitController;
 use App\Http\Controllers\KioskDeviceController;
 use App\Http\Controllers\PetugasController;
@@ -62,11 +68,35 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/kunjungan/lampiran/{attachment}', [VisitMediaController::class, 'attachment'])->name('visit.attachment');
 });
 
-// Dasbor Peran: Admin
+// Dasbor & Panel Admin (FR-30 sampai FR-35)
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
-    Route::get('/', function () {
-        return view('admin.dashboard');
-    })->name('dashboard');
+    Route::get('/', [AdminDashboardController::class, 'index'])->name('dashboard');
+
+    // Daftar Kunjungan, Detail, dan Ekspor (FR-30, FR-34)
+    Route::get('/kunjungan', [AdminVisitController::class, 'index'])->name('visits.index');
+    Route::get('/kunjungan/ekspor', [AdminVisitController::class, 'export'])->name('visits.export');
+    Route::get('/kunjungan/{visit}', [AdminVisitController::class, 'show'])->name('visits.show');
+
+    // Jadwal Piket & Penugasan Massal (FR-32)
+    Route::get('/jadwal', [AdminDutyScheduleController::class, 'index'])->name('schedules.index');
+    Route::post('/jadwal', [AdminDutyScheduleController::class, 'store'])->name('schedules.store');
+    Route::post('/jadwal/mass-assign', [AdminDutyScheduleController::class, 'massAssign'])->name('schedules.mass_assign');
+    Route::delete('/jadwal/{schedule}', [AdminDutyScheduleController::class, 'destroy'])->name('schedules.destroy');
+
+    // Analitik Swap (FR-33)
+    Route::get('/analitik-swap', [AdminSwapAnalyticsController::class, 'index'])->name('analytics.swaps');
+
+    // Kelola Akun Pengguna (FR-35)
+    Route::get('/pengguna', [AdminUserController::class, 'index'])->name('users.index');
+    Route::post('/pengguna', [AdminUserController::class, 'store'])->name('users.store');
+    Route::post('/pengguna/{user}/toggle', [AdminUserController::class, 'toggleStatus'])->name('users.toggle');
+    Route::post('/pengguna/{user}/reset-password', [AdminUserController::class, 'resetPassword'])->name('users.reset_password');
+
+    // Kelola Perangkat Kios (FR-01 / Task 7)
+    Route::get('/perangkat', [AdminKioskDeviceController::class, 'index'])->name('kiosks.index');
+    Route::post('/perangkat', [AdminKioskDeviceController::class, 'store'])->name('kiosks.store');
+    Route::post('/perangkat/{device}/toggle', [AdminKioskDeviceController::class, 'toggleStatus'])->name('kiosks.toggle');
+    Route::delete('/perangkat/{device}', [AdminKioskDeviceController::class, 'destroy'])->name('kiosks.destroy');
 });
 
 // Resepsionis — Antrean & Pemanggilan (FR-11)

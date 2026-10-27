@@ -16,14 +16,29 @@
                 <!-- Navigation Links -->
                 <div class="hidden space-x-6 sm:-my-px sm:ms-8 sm:flex">
                     @if (Auth::user()->isAdmin())
-                        <x-nav-link :href="route('admin.dashboard')" :active="request()->routeIs('admin.*')">
-                            {{ __('Dasbor Admin') }}
+                        <x-nav-link :href="route('admin.dashboard')" :active="request()->routeIs('admin.dashboard')">
+                            {{ __('Dasbor') }}
+                        </x-nav-link>
+                        <x-nav-link :href="route('admin.visits.index')" :active="request()->routeIs('admin.visits.*')">
+                            {{ __('Kunjungan') }}
+                        </x-nav-link>
+                        <x-nav-link :href="route('admin.schedules.index')" :active="request()->routeIs('admin.schedules.*')">
+                            {{ __('Jadwal') }}
+                        </x-nav-link>
+                        <x-nav-link :href="route('admin.analytics.swaps')" :active="request()->routeIs('admin.analytics.*')">
+                            {{ __('Swap') }}
+                        </x-nav-link>
+                        <x-nav-link :href="route('admin.users.index')" :active="request()->routeIs('admin.users.*')">
+                            {{ __('Pengguna') }}
+                        </x-nav-link>
+                        <x-nav-link :href="route('admin.kiosks.index')" :active="request()->routeIs('admin.kiosks.*')">
+                            {{ __('Perangkat') }}
                         </x-nav-link>
                         <x-nav-link :href="route('resepsionis.dashboard')" :active="request()->routeIs('resepsionis.*')">
                             {{ __('Resepsionis') }}
                         </x-nav-link>
                         <x-nav-link :href="route('petugas.dashboard')" :active="request()->routeIs('petugas.*')">
-                            {{ __('Portal Petugas') }}
+                            {{ __('Petugas') }}
                         </x-nav-link>
                     @elseif (Auth::user()->isResepsionis())
                         <x-nav-link :href="route('resepsionis.dashboard')" :active="request()->routeIs('resepsionis.*')">
