@@ -2,8 +2,10 @@
 
 use App\Http\Controllers\GuestVisitController;
 use App\Http\Controllers\KioskDeviceController;
+use App\Http\Controllers\PetugasController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\QueueController;
+use App\Http\Controllers\VisitMediaController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -50,30 +52,42 @@ Route::get('/dashboard', function () {
     return match ($user->role) {
         'admin' => redirect()->route('admin.dashboard'),
         'resepsionis' => redirect()->route('resepsionis.dashboard'),
-        default => redirect()->route('petugas.dashboard'),
+        default => redirect()->route('petugas.index'),
     };
 })->middleware(['auth'])->name('dashboard');
 
-// Dasbor Peran
+// Akses Media Privat Kunjungan (hanya pengguna terautentikasi)
+Route::middleware(['auth'])->group(function () {
+    Route::get('/kunjungan/{visit}/foto', [VisitMediaController::class, 'photo'])->name('visit.photo');
+    Route::get('/kunjungan/lampiran/{attachment}', [VisitMediaController::class, 'attachment'])->name('visit.attachment');
+});
+
+// Dasbor Peran: Admin
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/', function () {
         return view('admin.dashboard');
     })->name('dashboard');
 });
 
-// Resepsionis — Antrean (FR-11)
+// Resepsionis — Antrean & Pemanggilan (FR-11)
 Route::middleware(['auth', 'role:resepsionis,admin'])->prefix('resepsionis')->name('resepsionis.')->group(function () {
     Route::get('/', [QueueController::class, 'index'])->name('dashboard');
     Route::post('/panggil/{visit}', [QueueController::class, 'call'])->name('call');
     Route::post('/ulang/{visit}', [QueueController::class, 'recall'])->name('recall');
     Route::post('/lewati/{visit}', [QueueController::class, 'skip'])->name('skip');
+    Route::post('/reassign/{visit}', [QueueController::class, 'reassign'])->name('reassign');
     Route::get('/api/antrean', [QueueController::class, 'queueData'])->name('api.queue');
 });
 
+// Portal Petugas — Antrean Saya, Permintaan Online, Jadwal & Swap (FR-20 s.d. FR-24)
 Route::middleware(['auth', 'role:petugas,admin'])->prefix('petugas')->name('petugas.')->group(function () {
-    Route::get('/', function () {
-        return view('petugas.dashboard');
-    })->name('dashboard');
+    Route::get('/', [PetugasController::class, 'index'])->name('dashboard');
+    Route::get('/antrean', [PetugasController::class, 'index'])->name('index');
+    Route::post('/kunjungan/{visit}/start', [PetugasController::class, 'startService'])->name('start');
+    Route::post('/kunjungan/{visit}/finish', [PetugasController::class, 'finishService'])->name('finish');
+    Route::post('/kunjungan/{visit}/status', [PetugasController::class, 'updateStatus'])->name('status');
+    Route::post('/online/{visit}/status', [PetugasController::class, 'updateOnlineStatus'])->name('online.status');
+    Route::post('/swap', [PetugasController::class, 'storeSwap'])->name('swap.store');
 });
 
 // Profil Pengguna

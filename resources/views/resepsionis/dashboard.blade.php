@@ -93,6 +93,7 @@
                                 <th class="px-4 py-3 font-semibold text-slate-600">Nama Tamu</th>
                                 <th class="px-4 py-3 font-semibold text-slate-600">Instansi</th>
                                 <th class="px-4 py-3 font-semibold text-slate-600">Layanan</th>
+                                <th class="px-4 py-3 font-semibold text-slate-600">Petugas</th>
                                 <th class="px-4 py-3 font-semibold text-slate-600 w-28">Status</th>
                                 <th class="px-4 py-3 font-semibold text-slate-600 text-center w-56">Aksi</th>
                             </tr>
@@ -123,6 +124,25 @@
                                             <span class="block text-xs text-slate-500 mt-0.5">{{ $visit->service_type }}</span>
                                         @elseif($visit->non_pst_type)
                                             <span class="block text-xs text-slate-500 mt-0.5">{{ $visit->non_pst_type }}</span>
+                                        @endif
+                                    </td>
+                                    <td class="px-4 py-3">
+                                        @if(in_array($visit->status, ['menunggu', 'dipanggil']))
+                                            <form method="POST" action="{{ route('resepsionis.reassign', $visit) }}" class="inline-flex items-center">
+                                                @csrf
+                                                <select name="officer_id" onchange="this.form.submit()" class="text-xs rounded-lg border-slate-300 py-1 pl-2 pr-6 bg-slate-50 focus:border-blue-500 focus:ring-blue-500">
+                                                    <option value="">-- Pilih Petugas --</option>
+                                                    @foreach($officers as $off)
+                                                        <option value="{{ $off->id }}" {{ $visit->assigned_officer_id === $off->id ? 'selected' : '' }}>
+                                                            {{ $off->name }}
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                            </form>
+                                        @else
+                                            <span class="text-xs text-slate-700 font-medium">
+                                                {{ $visit->assignedOfficer?->name ?? '-' }}
+                                            </span>
                                         @endif
                                     </td>
                                     <td class="px-4 py-3">

@@ -6,6 +6,7 @@ use App\Http\Requests\StoreGuestVisitRequest;
 use App\Models\Visit;
 use App\Models\VisitAttachment;
 use App\Models\VisitStatusLog;
+use App\Services\OfficerAssignmentService;
 use App\Services\QueueNumberService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -18,6 +19,7 @@ class GuestVisitController extends Controller
 {
     public function __construct(
         protected QueueNumberService $queueService,
+        protected OfficerAssignmentService $assignmentService,
     ) {}
 
     /**
@@ -142,6 +144,9 @@ class GuestVisitController extends Controller
                 'user_id' => null,
                 'created_at' => now(),
             ]);
+
+            // Penugasan otomatis ke petugas piket aktif hari ini (FR-24)
+            $this->assignmentService->assignNextAvailableOfficer($visit);
 
             return $visit;
         });

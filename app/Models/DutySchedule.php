@@ -19,8 +19,15 @@ class DutySchedule extends Model
     protected function casts(): array
     {
         return [
-            'duty_date' => 'date',
+            'duty_date' => 'date:Y-m-d',
         ];
+    }
+
+    public function setDutyDateAttribute($value): void
+    {
+        $this->attributes['duty_date'] = $value instanceof \DateTimeInterface 
+            ? $value->format('Y-m-d') 
+            : substr((string) $value, 0, 10);
     }
 
     public function officer(): BelongsTo

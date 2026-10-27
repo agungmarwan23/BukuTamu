@@ -11,8 +11,15 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
+use App\Models\User;
+use App\Services\OfficerAssignmentService;
+
 class QueueController extends Controller
 {
+    public function __construct(
+        protected OfficerAssignmentService $assignmentService = new OfficerAssignmentService(new \App\Services\DutyScheduleService())
+    ) {}
+
     /**
      * Halaman resepsionis: daftar antrean kios hari ini.
      */
@@ -22,6 +29,7 @@ class QueueController extends Controller
 
         $visits = Visit::whereDate('visit_date', $today)
             ->where('channel', 'kiosk')
+            ->with(['assignedOfficer'])
             ->orderBy('queue_seq')
             ->get();
 
@@ -39,7 +47,13 @@ class QueueController extends Controller
             $q->whereDate('visit_date', $today)->where('channel', 'kiosk');
         })->latest('created_at')->first();
 
-        return view('resepsionis.dashboard', compact('visits', 'stats', 'lastCall'));
+        // Petugas aktif untuk dropdown pengalihan / reassign
+        $officers = User::whereIn('role', ['petugas', 'admin'])
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+
+        return view('resepsionis.dashboard', compact('visits', 'stats', 'lastCall', 'officers'));
     }
 
     /**
@@ -250,5 +264,19 @@ class QueueController extends Controller
             'stats' => $stats,
             'last_call_id' => $lastCall?->id,
         ]);
+    }
+
+    /**
+     * Resepsionis/Admin mengalihkan penugasan tiket ke petugas lain.
+     */
+    public function reassign(Request $request, Visit $visit): RedirectResponse
+    {
+        $request->validate([
+            'officer_id' => 'required|exists:users,id',
+        ]);
+
+        $this->assignmentService->reassignOfficer($visit, (int) $request->input('officer_id'), Auth::id());
+
+        return back()->with('success', "Tiket {$visit->queue_number} berhasil dialihkan ke petugas lain.");
     }
 }

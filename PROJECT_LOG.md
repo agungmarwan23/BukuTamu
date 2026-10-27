@@ -41,7 +41,7 @@ Status: ⬜ belum · 🟨 berjalan · ✅ selesai · ❌ gagal/diblokir
 | 1 | Fondasi: Laravel, auth, peran, migrasi, seeder | ✅ | Laravel, platform PHP 8.3 dikunci, auth username, 3 peran, semua migrasi PRD, seeder, test 100% lulus |
 | 2 | Form tamu (wizard, kondisional, foto, upload) | ✅ | Kios terdaftar (/kios), form online (/layanan), foto privat, anti-bot, 44 tests passed |
 | 3 | Antrean: nomor, panggil, layar TV, TTS, struk | ✅ | Nomor reset harian PST-01, dasbor resepsionis, polling layar TV + TTS, cetak struk 58mm, 60 tests passed |
-| 4 | Portal petugas: antrean saya, status, swap | ⬜ | |
+| 4 | Portal petugas: antrean saya, status, swap | ✅ | Antrean saya, alur Mulai Layani & Selesai + catatan, permintaan online, swap tanpa ubah jadwal asli, 75 tests passed |
 | 5 | Admin: daftar kunjungan, jadwal piket, dasbor, ekspor | ⬜ | |
 | 6 | Notifikasi: pengingat petugas, tautan SKM | ⬜ | |
 | 7 | Hardening, tes, HTTPS LAN, dokumentasi | ⬜ | |
@@ -59,6 +59,45 @@ Status: ⬜ belum · 🟨 berjalan · ✅ selesai · ❌ gagal/diblokir
 **Keputusan baru:** …
 **Langkah berikutnya:** …
 ```
+
+### 2026-10-27 — Fase 4 — Antigravity (Gemini 3.8 Flash)
+**Dikerjakan:**
+- Membuat `DutyScheduleService` untuk menentukan daftar petugas piket efektif harian yang memperhitungkan jadwal asli (`duty_schedules`) dan pertukaran jadwal (`duty_swaps`).
+- Membuat `OfficerAssignmentService` untuk penugasan tiket tamu otomatis (FR-24):
+  - Memilih petugas piket dengan beban tiket aktif paling rendah (`menunggu`, `dipanggil`, `dilayani`).
+  - Menyediakan fungsi pengalihan penugasan manual (`reassign`) oleh resepsionis atau admin.
+  - Mengintegrasikan penugasan otomatis ke pembuatan kunjungan di `GuestVisitController`.
+- Mengembangkan `VisitMediaController` dan rute terproteksi:
+  - `/kunjungan/{visit}/foto`: mengalirkan foto privat tamu ke pengguna terautentikasi dengan header aman.
+  - `/kunjungan/lampiran/{attachment}`: unduh berkas lampiran privat tamu.
+- Mengembangkan Portal Petugas lengkap di `/petugas` (`PetugasController` & `resources/views/petugas/index.blade.php`):
+  - **Tab Antrean Saya (Kios)**: Ringkasan statistik (menunggu, dipanggil, dilayani, selesai), tabel kunjungan hari ini, preview thumbnail foto + modal lightbox resolusi penuh, tautan berkas lampiran, tombol aksi **Mulai Layani** (status `dilayani` + catat `started_at`), tombol modal **Selesaikan** (status `selesai` + catat `finished_at` + form catatan layanan `officer_note`), serta tombol opsi **Tandai Tidak Hadir / Batalkan**.
+  - **Tab Permintaan Online**: Daftar tiket saluran `online`, tombol langsung chat WhatsApp (`https://wa.me/...`) & email tamu, modal tindak lanjut untuk update status (`dilayani`, `selesai`, `dibatalkan`) beserta catatan petugas.
+  - **Tab Jadwal Saya**: Menampilkan jadwal bulanan petugas, membedakan secara visual status Jadwal Normal, Digantikan oleh rekan (swap out), dan Menggantikan rekan (swap in).
+  - **Tab Tukar Jadwal (Swap Piket)**: Form pengajuan swap (pilih tanggal piket mendatang, pilih petugas rekan pengganti, isi alasan swap). **Sesuai PRD FR-23: baris jadwal asli di `duty_schedules` TIDAK PERNAH DIUBAH ATAU DITIMPA**, melainkan disimpan sebagai riwayat di `duty_swaps`.
+- Menambahkan fitur pengalihan petugas (`reassign`) di halaman resepsionis `/resepsionis` dengan kolom dropdown pilihan petugas.
+- Menulis pengujian unit dan fitur lengkap di `tests/Feature/PetugasTest.php` (15 test): validasi transisi status, otorisasi akses tiket, logging di `visit_status_logs`, proteksi akses foto/lampiran privat, logika auto-assignment, dan integritas jadwal asli saat swap.
+- Memvalidasi seluruh test suite (**75 test lulus 100%, 239 assertions**) dan build aset CSS/JS front-end via `npm run build`.
+
+**Hasil:** ✅ Berhasil. Portal Petugas, alur status layanan, catatan layanan, permohonan online, dan swap piket siap digunakan.
+**File penting:**
+- `app/Services/DutyScheduleService.php`
+- `app/Services/OfficerAssignmentService.php`
+- `app/Http/Controllers/PetugasController.php`
+- `app/Http/Controllers/VisitMediaController.php`
+- `app/Http/Controllers/GuestVisitController.php`
+- `app/Http/Controllers/QueueController.php`
+- `app/Models/DutySchedule.php`, `app/Models/DutySwap.php`, `app/Models/Visit.php`
+- `resources/views/petugas/index.blade.php`
+- `resources/views/resepsionis/dashboard.blade.php`
+- `routes/web.php`
+- `database/factories/DutyScheduleFactory.php`, `database/factories/DutySwapFactory.php`
+- `tests/Feature/PetugasTest.php`
+**Masalah & solusi:**
+- Penyesuaian mutator `setDutyDateAttribute` dan `setVisitDateAttribute` pada model `DutySchedule`, `DutySwap`, dan `Visit` agar penulisan tanggal di SQLite selalu konsisten `Y-m-d` sehingga assertion database test dan query tanggal di cPanel MySQL berjalan tanpa kendala.
+**Keputusan baru:**
+- Rute `/petugas` menjadi landing page utama portal petugas yang langsung mengarahkan ke tab antrean aktif, dan `/petugas/dashboard` dialiaskan ke rute yang sama.
+**Langkah berikutnya:** Fase 5 — Admin (Daftar Kunjungan Lengkap + Filter, CRUD Jadwal Piket Massal Bulanan, Dasbor Analitik Chart.js Lokal, Analitik Swap, Ekspor Excel/CSV, Kelola Akun & Perangkat Kios).
 
 ### 2026-10-27 — Fase 3 — Antigravity (Gemini 3.8 Flash)
 **Dikerjakan:**

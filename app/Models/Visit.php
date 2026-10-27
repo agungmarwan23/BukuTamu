@@ -41,7 +41,7 @@ class Visit extends Model
     protected function casts(): array
     {
         return [
-            'visit_date' => 'date',
+            'visit_date' => 'date:Y-m-d',
             'consent_at' => 'datetime',
             'called_at' => 'datetime',
             'started_at' => 'datetime',
@@ -49,6 +49,13 @@ class Visit extends Model
             'skm_sent_at' => 'datetime',
             'queue_seq' => 'integer',
         ];
+    }
+
+    public function setVisitDateAttribute($value): void
+    {
+        $this->attributes['visit_date'] = $value instanceof \DateTimeInterface 
+            ? $value->format('Y-m-d') 
+            : substr((string) $value, 0, 10);
     }
 
     public function assignedOfficer(): BelongsTo
