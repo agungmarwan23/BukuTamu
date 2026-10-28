@@ -66,6 +66,18 @@
                             </span>
                         </div>
                         <div>
+                            <span class="text-slate-400 block">Sumber Data:</span>
+                            @if ($visit->is_imported)
+                                <span class="font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 inline-block mt-0.5">
+                                    📂 Impor Riwayat ({{ $visit->import_source ?: 'Spreadsheet Lama' }})
+                                </span>
+                            @else
+                                <span class="font-semibold text-emerald-700 inline-block mt-0.5">
+                                    ✓ Kunjungan Langsung (Realtime)
+                                </span>
+                            @endif
+                        </div>
+                        <div>
                             <span class="text-slate-400 block">Persetujuan UU PDP (Data Pribadi):</span>
                             <span class="text-emerald-700 font-semibold">
                                 ✓ Disetujui ({{ $visit->consent_at ? $visit->consent_at->format('d/m/Y H:i') : '-' }})

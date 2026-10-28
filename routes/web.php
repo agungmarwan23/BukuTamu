@@ -62,8 +62,8 @@ Route::get('/dashboard', function () {
     };
 })->middleware(['auth'])->name('dashboard');
 
-// Akses Media Privat Kunjungan (hanya pengguna terautentikasi)
-Route::middleware(['auth'])->group(function () {
+// Akses Media Privat Kunjungan (hanya petugas, resepsionis, admin yang terautentikasi)
+Route::middleware(['auth', 'role:admin,resepsionis,petugas'])->group(function () {
     Route::get('/kunjungan/{visit}/foto', [VisitMediaController::class, 'photo'])->name('visit.photo');
     Route::get('/kunjungan/lampiran/{attachment}', [VisitMediaController::class, 'attachment'])->name('visit.attachment');
 });
@@ -72,13 +72,17 @@ Route::middleware(['auth'])->group(function () {
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/', [AdminDashboardController::class, 'index'])->name('dashboard');
 
-    // Daftar Kunjungan, Detail, dan Ekspor (FR-30, FR-34)
+    // Daftar Kunjungan, Detail, Ekspor, dan Impor (FR-30, FR-34)
     Route::get('/kunjungan', [AdminVisitController::class, 'index'])->name('visits.index');
     Route::get('/kunjungan/ekspor', [AdminVisitController::class, 'export'])->name('visits.export');
+    Route::get('/kunjungan/template', [AdminVisitController::class, 'downloadTemplate'])->name('visits.template');
+    Route::post('/kunjungan/import', [AdminVisitController::class, 'importCsv'])->name('visits.import');
     Route::get('/kunjungan/{visit}', [AdminVisitController::class, 'show'])->name('visits.show');
 
     // Jadwal Piket & Penugasan Massal (FR-32)
     Route::get('/jadwal', [AdminDutyScheduleController::class, 'index'])->name('schedules.index');
+    Route::get('/jadwal/template', [AdminDutyScheduleController::class, 'downloadTemplate'])->name('schedules.template');
+    Route::post('/jadwal/import', [AdminDutyScheduleController::class, 'importCsv'])->name('schedules.import');
     Route::post('/jadwal', [AdminDutyScheduleController::class, 'store'])->name('schedules.store');
     Route::post('/jadwal/mass-assign', [AdminDutyScheduleController::class, 'massAssign'])->name('schedules.mass_assign');
     Route::delete('/jadwal/{schedule}', [AdminDutyScheduleController::class, 'destroy'])->name('schedules.destroy');
@@ -95,6 +99,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     // Kelola Perangkat Kios (FR-01 / Task 7)
     Route::get('/perangkat', [AdminKioskDeviceController::class, 'index'])->name('kiosks.index');
     Route::post('/perangkat', [AdminKioskDeviceController::class, 'store'])->name('kiosks.store');
+    Route::post('/perangkat/{device}/regenerate-token', [AdminKioskDeviceController::class, 'regenerateToken'])->name('kiosks.regenerate');
     Route::post('/perangkat/{device}/toggle', [AdminKioskDeviceController::class, 'toggleStatus'])->name('kiosks.toggle');
     Route::delete('/perangkat/{device}', [AdminKioskDeviceController::class, 'destroy'])->name('kiosks.destroy');
 });

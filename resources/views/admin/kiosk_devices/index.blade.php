@@ -11,7 +11,7 @@
                 </p>
             </div>
             <div>
-                <button type="button" @click="showAddModal = true"
+                <button type="button" @click="$dispatch('open-kiosk-modal')"
                     class="inline-flex items-center gap-2 px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold shadow-sm transition">
                     <span>+ Daftarkan Kios Baru</span>
                 </button>
@@ -19,7 +19,7 @@
         </div>
     </x-slot>
 
-    <div class="py-6" x-data="{ showAddModal: false }">
+    <div class="py-6" x-data="{ showAddModal: false }" @open-kiosk-modal.window="showAddModal = true">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
 
             <!-- Flash Alerts -->
@@ -36,7 +36,7 @@
             @if (session('activation_url'))
                 <div class="p-6 rounded-2xl bg-blue-50 border-2 border-blue-300 shadow-md space-y-3">
                     <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-xl bg-blue-900 text-white flex items-center justify-center font-bold">
+                        <div class="w-10 h-10 rounded-xl bg-blue-900 text-white flex items-center justify-center font-bold text-lg">
                             🔑
                         </div>
                         <div>
@@ -45,15 +45,22 @@
                         </div>
                     </div>
                     <p class="text-xs text-slate-600">
-                        Buka tautan ini <strong>sekali saja langsung di browser PC Kios Lobi</strong> untuk mendaftarkan dan menyimpan cookie otentikasi perangkat:
+                        Buka tautan ini di peramban (browser) PC/Tablet yang dijadikan Kios Lobi untuk mendaftarkannya secara permanen:
                     </p>
-                    <div class="flex items-center gap-2">
+                    <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                         <input type="text" readonly value="{{ session('activation_url') }}" id="act_url"
-                            class="w-full text-xs font-mono bg-white rounded-xl border-blue-200 p-2.5 text-blue-900 select-all">
+                            class="w-full text-xs font-mono bg-white rounded-xl border-blue-200 p-2.5 text-blue-900 select-all focus:ring-blue-500">
                         <button type="button" onclick="navigator.clipboard.writeText(document.getElementById('act_url').value); alert('Tautan aktivasi berhasil disalin!');"
-                            class="px-4 py-2.5 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold shrink-0">
-                            Salin URL
+                            class="px-4 py-2.5 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold shrink-0 flex items-center justify-center gap-1.5 shadow-sm">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                            <span>Salin URL</span>
                         </button>
+                        <a href="{{ session('activation_url') }}" target="_blank"
+                            class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shrink-0 flex items-center justify-center gap-1.5 shadow-sm"
+                            title="Aktifkan langsung jika Anda sedang membuka halaman ini di browser PC lobi">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                            <span>Buka Aktivasi Sekarang</span>
+                        </a>
                     </div>
                 </div>
             @endif
@@ -61,7 +68,14 @@
             <!-- Daftar Perangkat -->
             <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
                 <div class="px-6 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
-                    <span class="text-xs font-bold text-slate-700">Daftar Perangkat PC Kios</span>
+                    <div>
+                        <span class="text-xs font-bold text-slate-700">Daftar Perangkat PC Kios</span>
+                        <p class="text-[11px] text-slate-500">Gunakan tombol <strong>Buat Tautan Aktivasi</strong> untuk mengaktifkan perangkat di PC lobi.</p>
+                    </div>
+                    <button type="button" @click="showAddModal = true"
+                        class="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold shadow-sm transition">
+                        <span>+ Daftarkan Kios Baru</span>
+                    </button>
                 </div>
 
                 @if ($devices->isEmpty())
@@ -90,8 +104,17 @@
                                         <td class="px-4 py-3.5 font-mono text-slate-400 text-[11px] max-w-xs truncate">
                                             {{ substr($dev->token_hash, 0, 16) }}...
                                         </td>
-                                        <td class="px-4 py-3.5 text-slate-600">
-                                            {{ $dev->activator?->name ?: 'Belum diaktivasi' }}
+                                        <td class="px-4 py-3.5">
+                                            @if ($dev->activator)
+                                                <span class="inline-flex items-center gap-1 text-slate-700 font-medium">
+                                                    <svg class="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                                    {{ $dev->activator->name }}
+                                                </span>
+                                            @else
+                                                <span class="inline-flex items-center gap-1 text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full font-semibold text-[11px]">
+                                                    Belum Diaktivasi
+                                                </span>
+                                            @endif
                                         </td>
                                         <td class="px-4 py-3.5 text-slate-500">
                                             {{ $dev->last_seen_at ? $dev->last_seen_at->diffForHumans() : '-' }}
@@ -111,6 +134,13 @@
                                         </td>
                                         <td class="px-4 py-3.5 text-right whitespace-nowrap">
                                             <div class="flex items-center justify-end gap-2">
+                                                <form method="POST" action="{{ route('admin.kiosks.regenerate', $dev) }}" class="inline" onsubmit="return confirm('Buat tautan aktivasi baru untuk {{ $dev->name }}? Buka tautan tersebut di browser PC lobi untuk mengaktifkannya.');">
+                                                    @csrf
+                                                    <button type="submit" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 flex items-center gap-1" title="Buat tautan aktivasi">
+                                                        <span>🔑 Buat Tautan Aktivasi</span>
+                                                    </button>
+                                                </form>
+
                                                 <form method="POST" action="{{ route('admin.kiosks.toggle', $dev) }}" class="inline">
                                                     @csrf
                                                     <button type="submit" class="px-2.5 py-1 rounded-lg text-xs font-semibold {{ $dev->is_active ? 'bg-slate-100 hover:bg-slate-200 text-slate-700' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100' }}">

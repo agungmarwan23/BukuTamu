@@ -30,4 +30,9 @@ class KioskDevice extends Model
     {
         return $this->belongsTo(User::class, 'activated_by');
     }
+
+    public function activator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'activated_by');
+    }
 }

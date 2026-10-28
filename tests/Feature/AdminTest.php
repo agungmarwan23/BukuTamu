@@ -8,6 +8,7 @@ use App\Models\KioskDevice;
 use App\Models\User;
 use App\Models\Visit;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
@@ -327,5 +328,94 @@ class AdminTest extends TestCase
         // Hapus
         $this->actingAs($this->admin)->delete(route('admin.kiosks.destroy', $device));
         $this->assertDatabaseMissing('kiosk_devices', ['id' => $device->id]);
+    }
+
+    public function test_admin_can_regenerate_kiosk_device_activation_token(): void
+    {
+        $device = KioskDevice::create([
+            'name' => 'PC Kios Lobi Lama',
+            'token_hash' => hash('sha256', 'old-token'),
+            'is_active' => true,
+        ]);
+
+        $response = $this->actingAs($this->admin)
+            ->post(route('admin.kiosks.regenerate', $device));
+
+        $response->assertRedirect();
+        $response->assertSessionHas('activation_url');
+        $response->assertSessionHas('success');
+
+        $device->refresh();
+        $this->assertNotEquals(hash('sha256', 'old-token'), $device->token_hash);
+        $this->assertNull($device->activated_by);
+    }
+
+    public function test_admin_can_download_visits_csv_template(): void
+    {
+        $response = $this->actingAs($this->admin)
+            ->get(route('admin.visits.template'));
+
+        $response->assertOk();
+        $response->assertHeader('Content-Type', 'text/csv; charset=UTF-8');
+    }
+
+    public function test_admin_can_import_visits_via_csv(): void
+    {
+        $csvData = "tanggal,nama_lengkap,instansi,no_hp,email,tujuan,jenis_layanan,rincian_keperluan,status\n"
+                 . "2026-08-10,Andi Prasetyo,Dinas Sosial,081234567890,andi@test.com,pst,Konsultasi Statistik,Konsultasi data DTKS,selesai\n"
+                 . "2026-08-11,Dewi Sartika,Mahasiswa Unisi,081298765432,,non_pst,Kerjasama,Riset skripsi,selesai\n";
+
+        $file = UploadedFile::fake()->createWithContent('riwayat_kunjungan.csv', $csvData);
+
+        $response = $this->actingAs($this->admin)
+            ->post(route('admin.visits.import'), [
+                'csv_file' => $file,
+                'source_name' => 'Spreadsheet Arsip 2026',
+            ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('success');
+
+        $this->assertDatabaseHas('visits', [
+            'full_name' => 'Andi Prasetyo',
+            'is_imported' => true,
+            'import_source' => 'Spreadsheet Arsip 2026',
+            'status' => 'selesai',
+        ]);
+
+        $this->assertDatabaseHas('visits', [
+            'full_name' => 'Dewi Sartika',
+            'is_imported' => true,
+            'import_source' => 'Spreadsheet Arsip 2026',
+            'status' => 'selesai',
+        ]);
+    }
+
+    public function test_admin_can_filter_visits_by_is_imported(): void
+    {
+        // 1 kunjungan langsung
+        Visit::factory()->create([
+            'full_name' => 'Tamu Langsung',
+            'is_imported' => false,
+        ]);
+
+        // 1 kunjungan impor
+        Visit::factory()->create([
+            'full_name' => 'Tamu Riwayat Impor',
+            'is_imported' => true,
+            'import_source' => 'Excel 2025',
+        ]);
+
+        // Filter hanya data impor
+        $resImported = $this->actingAs($this->admin)
+            ->get(route('admin.visits.index', ['is_imported' => '1']));
+        $resImported->assertSee('Tamu Riwayat Impor');
+        $resImported->assertDontSee('Tamu Langsung');
+
+        // Filter hanya kunjungan langsung
+        $resDirect = $this->actingAs($this->admin)
+            ->get(route('admin.visits.index', ['is_imported' => '0']));
+        $resDirect->assertSee('Tamu Langsung');
+        $resDirect->assertDontSee('Tamu Riwayat Impor');
     }
 }

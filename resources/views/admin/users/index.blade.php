@@ -11,7 +11,7 @@
                 </p>
             </div>
             <div>
-                <button type="button" @click="showAddModal = true"
+                <button type="button" @click="$dispatch('open-user-modal')"
                     class="inline-flex items-center gap-2 px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold shadow-sm transition">
                     <span>+ Tambah Akun Baru</span>
                 </button>
@@ -19,7 +19,7 @@
         </div>
     </x-slot>
 
-    <div class="py-6" x-data="{ showAddModal: false, activeResetModal: null, selectedUser: null }">
+    <div class="py-6" x-data="{ showAddModal: false, activeResetModal: null, selectedUser: null }" @open-user-modal.window="showAddModal = true">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
 
             <!-- Flash Alerts -->

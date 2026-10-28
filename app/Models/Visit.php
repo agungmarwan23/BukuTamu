@@ -30,6 +30,8 @@ class Visit extends Model
         'photo_path',
         'consent_at',
         'status',
+        'is_imported',
+        'import_source',
         'assigned_officer_id',
         'called_at',
         'started_at',
@@ -42,6 +44,7 @@ class Visit extends Model
     {
         return [
             'visit_date' => 'date:Y-m-d',
+            'is_imported' => 'boolean',
             'consent_at' => 'datetime',
             'called_at' => 'datetime',
             'started_at' => 'datetime',

@@ -10,25 +10,58 @@
                     Semua riwayat tamu lobi (kios) dan permohonan daring (online) dengan filter komprehensif.
                 </p>
             </div>
-            <div>
+            <div class="flex flex-wrap items-center gap-2">
+                <a href="{{ route('admin.visits.template') }}"
+                    class="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold shadow-sm transition-colors"
+                    title="Unduh contoh template CSV kunjungan">
+                    <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                    </svg>
+                    <span>Template CSV</span>
+                </a>
+
+                <button type="button" @click="$dispatch('open-import-visit-modal')"
+                    class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-sm transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                    </svg>
+                    <span>Impor Riwayat CSV</span>
+                </button>
+
                 <a href="{{ route('admin.visits.export', request()->query()) }}"
                     class="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm transition-colors">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                     </svg>
-                    <span>Ekspor ke CSV / Excel</span>
+                    <span>Ekspor CSV / Excel</span>
                 </a>
             </div>
         </div>
     </x-slot>
 
-    <div class="py-6" x-data="{ activePhotoModal: null }">
+    <div class="py-6" x-data="{ activePhotoModal: null, showImportModal: false }" @open-import-visit-modal.window="showImportModal = true">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+
+            <!-- Flash Alerts -->
+            @if (session('success'))
+                <div class="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm shadow-sm flex items-center gap-2">
+                    <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                    <span>{{ session('success') }}</span>
+                </div>
+            @endif
+
+            @if (session('error'))
+                <div class="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm shadow-sm">
+                    {{ session('error') }}
+                </div>
+            @endif
 
             <!-- Filter Panel -->
             <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
                 <form method="GET" action="{{ route('admin.visits.index') }}" class="space-y-4">
-                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
                         <!-- Rentang Tanggal Mulai -->
                         <div>
                             <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Dari Tanggal</label>
@@ -50,6 +83,16 @@
                                 <option value="">Semua Saluran</option>
                                 <option value="kiosk" {{ request('channel') === 'kiosk' ? 'selected' : '' }}>Kios Lobi</option>
                                 <option value="online" {{ request('channel') === 'online' ? 'selected' : '' }}>Online</option>
+                            </select>
+                        </div>
+
+                        <!-- Sumber Data (Langsung vs Impor) -->
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Sumber Data</label>
+                            <select name="is_imported" class="w-full text-xs rounded-xl border-slate-300 focus:border-blue-500 focus:ring-blue-500">
+                                <option value="">Semua Sumber</option>
+                                <option value="0" {{ request('is_imported') === '0' ? 'selected' : '' }}>Kunjungan Langsung</option>
+                                <option value="1" {{ request('is_imported') === '1' ? 'selected' : '' }}>Data Impor (Riwayat)</option>
                             </select>
                         </div>
 
@@ -150,15 +193,22 @@
                                                 </span>
                                             @else
                                                 <span class="inline-block px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-mono text-xs border border-slate-200">
-                                                    Online
+                                                    {{ $v->is_imported ? 'Impor' : 'Online' }}
                                                 </span>
                                             @endif
-                                            <div class="text-[11px] font-mono text-slate-400 mt-1">{{ $v->ticket_code }}</div>
+                                            <div class="text-[11px] font-mono text-slate-400 mt-1 flex items-center gap-1 flex-wrap">
+                                                <span>{{ $v->ticket_code }}</span>
+                                                @if ($v->is_imported)
+                                                    <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200" title="Sumber: {{ $v->import_source ?: 'Spreadsheet Lama' }}">
+                                                        Spreadsheet
+                                                    </span>
+                                                @endif
+                                            </div>
                                         </td>
 
                                         <td class="px-4 py-3.5 whitespace-nowrap text-xs text-slate-600">
                                             {{ $v->visit_date ? $v->visit_date->format('d/m/Y') : '-' }}
-                                            <div class="text-[11px] text-slate-400">{{ $v->created_at->format('H:i') }} WIB</div>
+                                            <div class="text-[11px] text-slate-400">{{ $v->created_at ? $v->created_at->format('H:i') . ' WIB' : '-' }}</div>
                                         </td>
 
                                         <td class="px-4 py-3.5 whitespace-nowrap">
@@ -229,6 +279,62 @@
                     <div class="p-4 bg-slate-100 flex items-center justify-center">
                         <img :src="activePhotoModal" alt="Foto Tamu" class="rounded-xl max-h-[70vh] object-contain shadow" />
                     </div>
+                </div>
+            <!-- Modal Impor Riwayat Kunjungan CSV -->
+            <div x-show="showImportModal" x-cloak class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+                <div @click.away="showImportModal = false" class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+                    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                        <h3 class="font-bold text-slate-800 text-base flex items-center gap-2">
+                            <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                            </svg>
+                            <span>Impor Riwayat Kunjungan / Spreadsheet</span>
+                        </h3>
+                        <button type="button" @click="showImportModal = false" class="text-slate-400 hover:text-slate-600">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+
+                    <div class="p-3 bg-indigo-50 border border-indigo-200 rounded-xl text-xs text-indigo-900 space-y-1.5">
+                        <p class="font-semibold">Format Kolom File CSV:</p>
+                        <p class="text-[11px] leading-relaxed">
+                            File CSV mendukung kolom: <code class="bg-white px-1 py-0.5 rounded border border-indigo-200 font-mono">tanggal,nama_lengkap,instansi,no_hp,email,tujuan,jenis_layanan,rincian_keperluan,status</code>
+                        </p>
+                        <p class="text-[11px] text-slate-600">
+                            * Kolom wajib: <strong>nama_lengkap</strong>. Tanggal dapat berupa YYYY-MM-DD atau DD/MM/YYYY.
+                        </p>
+                        <div class="pt-1">
+                            <a href="{{ route('admin.visits.template') }}" class="inline-flex items-center gap-1 text-indigo-700 font-bold hover:underline">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                                <span>Unduh Contoh Template CSV Kunjungan</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <form method="POST" action="{{ route('admin.visits.import') }}" enctype="multipart/form-data" class="space-y-4">
+                        @csrf
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Pilih File CSV (.csv / .txt):</label>
+                            <input type="file" name="csv_file" accept=".csv,.txt" required
+                                class="w-full text-xs text-slate-600 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 border border-slate-300 rounded-xl p-1 focus:outline-none">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Label / Nama Sumber Data:</label>
+                            <input type="text" name="source_name" placeholder="Misal: Spreadsheet Buku Tamu 2025" value="Impor Spreadsheet Lama"
+                                class="w-full text-xs rounded-xl border-slate-300 focus:border-indigo-500 focus:ring-indigo-500">
+                            <p class="text-[11px] text-slate-400 mt-1">Label ini akan disimpan sebagai tanda pembeda data riwayat lama.</p>
+                        </div>
+
+                        <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                            <button type="button" @click="showImportModal = false" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800">
+                                Batal
+                            </button>
+                            <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-sm">
+                                Unggah & Impor Riwayat
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
 

@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Models\Visit;
 use App\Models\VisitStatusLog;
 use App\Services\DutyScheduleService;
+use App\Services\Notification\NotificationService;
 use App\Services\OfficerAssignmentService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -19,6 +20,7 @@ class PetugasController extends Controller
     public function __construct(
         protected DutyScheduleService $dutyScheduleService,
         protected OfficerAssignmentService $assignmentService,
+        protected NotificationService $notificationService,
     ) {}
 
     /**
@@ -176,6 +178,9 @@ class PetugasController extends Controller
             'created_at' => now(),
         ]);
 
+        // Kirim survei SKM otomatis jika URL SKM sudah diatur (FR-41)
+        $this->notificationService->sendSkmSurvey($visit->fresh());
+
         return back()->with('success', "Layanan untuk nomor {$visit->queue_number} berhasil diselesaikan.");
     }
 
@@ -257,6 +262,11 @@ class PetugasController extends Controller
             'user_id' => $user->id,
             'created_at' => now(),
         ]);
+
+        // Kirim survei SKM otomatis jika status menjadi selesai (FR-41)
+        if ($targetStatus === 'selesai') {
+            $this->notificationService->sendSkmSurvey($visit->fresh());
+        }
 
         return redirect()->route('petugas.index', ['tab' => 'online'])
             ->with('success', "Status permohonan online {$visit->ticket_code} berhasil diperbarui.");

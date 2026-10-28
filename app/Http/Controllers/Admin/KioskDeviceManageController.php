@@ -64,6 +64,27 @@ class KioskDeviceManageController extends Controller
     }
 
     /**
+     * Buat ulang tautan aktivasi untuk perangkat kios (berguna jika belum diaktivasi atau token hilang).
+     */
+    public function regenerateToken(KioskDevice $device): RedirectResponse
+    {
+        $plainToken = Str::random(40);
+        $tokenHash = hash('sha256', $plainToken);
+
+        $device->update([
+            'token_hash' => $tokenHash,
+            'activated_by' => null, // reset status aktivasi
+        ]);
+
+        $activationUrl = route('kios.activate', ['token' => $plainToken]);
+
+        return back()
+            ->with('success', "Tautan aktivasi baru untuk '{$device->name}' berhasil dibuat.")
+            ->with('activation_url', $activationUrl)
+            ->with('device_name', $device->name);
+    }
+
+    /**
      * Hapus perangkat kios.
      */
     public function destroy(KioskDevice $device): RedirectResponse

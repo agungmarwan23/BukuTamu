@@ -43,8 +43,8 @@ Status: ⬜ belum · 🟨 berjalan · ✅ selesai · ❌ gagal/diblokir
 | 3 | Antrean: nomor, panggil, layar TV, TTS, struk | ✅ | Nomor reset harian PST-01, dasbor resepsionis, polling layar TV + TTS, cetak struk 58mm, 60 tests passed |
 | 4 | Portal petugas: antrean saya, status, swap | ✅ | Antrean saya, alur Mulai Layani & Selesai + catatan, permintaan online, swap tanpa ubah jadwal asli, 75 tests passed |
 | 5 | Admin: daftar kunjungan, jadwal piket, dasbor, ekspor | ✅ | Dasbor Chart.js lokal, daftar + filter + detail audit trail, ekspor CSV, penugasan massal bulanan, analitik swap, kelola akun & kios, 90 tests passed |
-| 6 | Notifikasi: pengingat petugas, tautan SKM | ⬜ | |
-| 7 | Hardening, tes, HTTPS LAN, dokumentasi | ⬜ | |
+| 6 | Notifikasi: pengingat petugas, tautan SKM | ✅ | Pola driver (log, mail, whatsapp), pengingat piket 07:00 (swap-aware), tautan SKM otomatis saat selesai, impor jadwal CSV, 102 tests passed |
+| 7 | Hardening, tes, HTTPS LAN, dokumentasi | ✅ | 116 test lulus 100% (417 assertions), AC-1 s.d. AC-10 teruji, security headers, retensi foto 365 hari, backup DB, README lengkap |
 | 8 | Deploy cPanel | ⬜ | |
 
 ## 5. Log kerja (terbaru di atas)
@@ -59,6 +59,138 @@ Status: ⬜ belum · 🟨 berjalan · ✅ selesai · ❌ gagal/diblokir
 **Keputusan baru:** …
 **Langkah berikutnya:** …
 ```
+
+### 2026-10-28 — Fase 7 — Antigravity (Gemini 3.8 Flash)
+**Dikerjakan:**
+- **Audit Keamanan & Hardening Sistem (FR-42 & NFR Bagian 7)**:
+  - Membuat `SecurityHeadersMiddleware` yang menyuntikkan header keamanan HTTP penting: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY` (dengan pengecualian `SAMEORIGIN` khusus tampilan kios dan layar TV agar kompatibel iframe signage), `X-XSS-Protection: 1; mode=block`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy: camera=(self), microphone=(), geolocation=()`, serta pencegahan cache agresif pada area terotentikasi.
+  - Mendaftarkan `SecurityHeadersMiddleware` secara global di `bootstrap/app.php`.
+  - Memperkuat otorisasi rute media privat (`/kunjungan/{visit}/foto` dan `/kunjungan/lampiran/{attachment}`) dengan middleware peran `role:admin,resepsionis,petugas`.
+  - Menambahkan proteksi *rate limiting* (`throttle:5,1`) pada endpoint autentikasi login (`POST /login`) di `routes/auth.php` untuk mencegah serangan brute-force credential.
+- **Tugas Terjadwal Retensi Foto 365 Hari (FR-05 & UU PDP No. 27/2022)**:
+  - Membuat Artisan Command `photos:purge-expired` (`PurgeExpiredPhotosCommand`) yang mencari dan menghapus file fisik foto yang berusia > 365 hari dari disk privat dan mengosongkan `photo_path = null` di database, **tanpa menghapus data teks kunjungan**.
+  - Mendukung opsi `--dry-run` (simulasi pratinjau) dan `--days=N` (kustomisasi batas retensi), disertai pencatatan detail ke file log sistem.
+  - Menjadwalkan `photos:purge-expired` harian pukul 02:00 WIB di `routes/console.php`.
+- **Tugas Terjadwal Backup Basis Data Otomatis (NFR Bagian 7)**:
+  - Membuat Artisan Command `db:backup` (`BackupDatabaseCommand`) yang melakukan dump database MySQL ke direktori privat `storage/app/backups` dalam format SQL bertanggal.
+  - Auto-discovery binary `mysqldump` yang adaptif baik untuk instalasi lokal Laragon/XAMPP maupun server hosting Linux/cPanel.
+  - Menyediakan opsi `--keep=N` (default: 7 hari) untuk membersihkan file backup usang secara otomatis.
+  - Menjadwalkan `db:backup` harian pukul 01:00 WIB di `routes/console.php`.
+- **Pengujian Lengkap Kriteria Penerimaan PRD (Bagian 10)**:
+  - Menulis 10 pengujian end-to-end terstruktur di `tests/Feature/AcceptanceCriteriaTest.php` yang memvalidasi seluruh kriteria penerimaan:
+    - `AC-1`: Tamu kios wajib foto & data wajib; tamu online tidak meminta foto (`test_ac_01`).
+    - `AC-2`: Tamu bersamaan tidak pernah mendapat nomor antrean yang sama (`test_ac_02`).
+    - `AC-3`: Validasi kondisional jenis layanan PST dan judul/isi Pengaduan (`test_ac_03`).
+    - `AC-4`: Swap piket membuat baris `duty_swaps` baru dan jadwal asli di `duty_schedules` tetap utuh (`test_ac_04`).
+    - `AC-5`: Layar TV antrean publik dan API polling `/api/layar` sama sekali tidak memuat data pribadi tamu (`test_ac_05`).
+    - `AC-6`: Foto dan lampiran privat ditolak jika diakses tanpa autentikasi/peran berwenang (`test_ac_06`).
+    - `AC-7`: Ekspor CSV memfilter baris sesuai parameter filter aktif (`test_ac_07`).
+    - `AC-8`: Rute `/kios` menolak perangkat tidak terdaftar dengan status 403 Forbidden (`test_ac_08`).
+    - `AC-9`: Retensi foto 365 hari menghapus file fisik dan mempertahankan data teks (`test_ac_09`).
+    - `AC-10`: Security headers terpasang dengan benar pada setiap respons (`test_ac_10`).
+  - Menjalankan seluruh test suite aplikasi: **116 test lulus 100% (417 assertions)** tanpa kegagalan.
+- **Penyusunan Dokumentasi Komprehensif `README.md`**:
+  - Menyusun panduan instalasi lokal lengkap (Laragon, Composer, NPM, MySQL).
+  - Menyusun panduan konfigurasi SSL / HTTPS LAN untuk akses webcam di PC/tablet lobi (Laragon SSL, mkcert, trust CA, dan bypass Chrome flags).
+  - Menyusun panduan Chrome Kiosk Mode (`--kiosk --kiosk-printing`) untuk PC kios dan TV display lobi.
+  - Menyusun panduan printer thermal DT 58D (USB, driver POS 58 mm, layout kertas 58mm x Receipt, margin 0).
+  - Menyusun panduan pendaftaran/aktivasi perangkat kios (Admin & CLI), backup database, retensi foto, dan Task Scheduler/Cron cPanel.
+  - Membangun kembali aset front-end produksi via `npm run build`.
+
+**Hasil:** ✅ Berhasil. Seluruh kriteria penerimaan PRD (AC-1 s.d. AC-10) lulus 100%, sistem terlindungi security headers dan rate limiter, scheduler retensi foto 365 hari & backup database aktif, serta dokumentasi README lengkap.
+**File penting:**
+- `app/Http/Middleware/SecurityHeadersMiddleware.php`
+- `app/Console/Commands/PurgeExpiredPhotosCommand.php`
+- `app/Console/Commands/BackupDatabaseCommand.php`
+- `routes/console.php`, `routes/auth.php`, `routes/web.php`
+- `bootstrap/app.php`
+- `tests/Feature/AcceptanceCriteriaTest.php`
+- `README.md`
+- `PROJECT_LOG.md`
+**Masalah & solusi:**
+- Pada test awal `AcceptanceCriteriaTest`, terjadi perbedaan nama field form (`name` vs `full_name`, `channel='kiosk'`). Seluruh mapping disesuaikan dengan skema tabel database dan validasi `StoreGuestVisitRequest`, menghasilkan kelulusan 100%.
+**Langkah berikutnya:** Fase 8 — Deploy cPanel (Checklist deploy, panduan struktur folder hosting, migrasi, AutoSSL, dan cron job cPanel).
+
+### 2026-10-27 — Perbaikan & Impor Riwayat Spreadsheet — Antigravity (Gemini 3.8 Flash)
+**Dikerjakan:**
+- **Perbaikan Pemicu Modal Antarmuka Admin (Bugfix Alpine.js Scope)**:
+  - Mengidentifikasi penyebab tombol modal header (`showAddModal`, `showMassModal`, `showImportModal`) tidak merespons: elemen `<x-slot name="header">` berada di luar cakupan `x-data` di dalam tag `<main>`.
+  - Memperbaiki komunikasi antar komponen menggunakan `$dispatch('open-*-modal')` dan listener `@open-*-modal.window` pada seluruh halaman admin (`admin/kiosk_devices`, `admin/schedules`, dan `admin/users`).
+  - Menambahkan tombol aksi langsung pada badan tabel (*card header*) sehingga pengguna dapat membuka form baik dari tombol header atas maupun tombol tabel.
+- **Penyempurnaan Modul Perangkat Kios (`/admin/perangkat`)**:
+  - Menambahkan aksi `regenerateToken(KioskDevice $device)` (`POST /admin/perangkat/{device}/regenerate-token`) untuk membuat ulang token dan tautan aktivasi instan bagi perangkat kios (termasuk data awal).
+  - Menyediakan tombol **🔑 Buat Tautan Aktivasi** per baris perangkat dan tombol aksi **Buka Aktivasi Sekarang** langsung di browser.
+- **Fitur Impor Riwayat Kunjungan dari Spreadsheet/Excel (Permintaan Pengguna #3)**:
+  - Membuat migrasi `2026_10_27_000002_add_is_imported_to_visits_table.php` untuk menambahkan kolom `is_imported` (boolean) dan `import_source` (string) pada tabel `visits`.
+  - Mengembangkan aksi `downloadTemplate()` pada `VisitController` yang menghasilkan contoh CSV lengkap (`tanggal,nama_lengkap,instansi,no_hp,email,tujuan,jenis_layanan,rincian_keperluan,status`).
+  - Mengembangkan aksi `importCsv()` pada `VisitController` yang mampu membaca delimiter koma atau titik koma, memetakan variasi nama kolom (misal `tgl`, `nama`, `asal_instansi`, dll.), men-generate kode tiket unik `IMP-YYYYMMDD-XXXX`, dan mencatat riwayat log audit.
+  - Menambahkan filter *Sumber Data* (Semua, Kunjungan Langsung, Data Impor) pada `/admin/kunjungan` serta tanda visual *badge* `Spreadsheet` / `Impor` pada tabel dan halaman detail.
+- **Pengujian & Verifikasi**:
+  - Menambahkan 4 test baru di `tests/Feature/AdminTest.php`.
+  - Menjalankan seluruh test suite aplikasi: **106 test lulus 100% (351 assertions)**.
+  - Membangun ulang aset front-end produksi via `npm run build`.
+
+**Hasil:** ✅ Berhasil. Seluruh modal admin kini terbuka lancar, aktivasi kios dapat dibuat ulang kapan saja, dan riwayat kunjungan spreadsheet lama dapat diimpor rapi ke sistem.
+**File penting:**
+- `app/Http/Controllers/Admin/KioskDeviceManageController.php`
+- `app/Http/Controllers/Admin/VisitController.php`
+- `resources/views/admin/kiosk_devices/index.blade.php`
+- `resources/views/admin/schedules/index.blade.php`
+- `resources/views/admin/users/index.blade.php`
+- `resources/views/admin/visits/index.blade.php`
+- `resources/views/admin/visits/show.blade.php`
+- `routes/web.php`
+- `tests/Feature/AdminTest.php`
+
+### 2026-10-27 — Fase 6 — Antigravity (Gemini 3.8 Flash)
+**Dikerjakan:**
+- **Pola Driver Notifikasi (`NotificationService`) (FR-42)**:
+  - Membuat antarmuka `App\Contracts\NotificationDriverInterface`.
+  - Mengimplementasikan 3 driver notifikasi:
+    - `LogDriver`: mencatat pengiriman ke log Laravel.
+    - `MailDriver`: mengirim email pemberitahuan ke penerima.
+    - `WhatsAppDriver`: kerangka HTTP client dengan URL endpoint, token otentikasi, nomor pengirim, dan timeout dari `.env`.
+  - Mengembangkan service sentral `NotificationService` dengan mekanisme pencatatan otomatis ke tabel `notification_logs` (status `pending`, `sent`, `failed`).
+  - Mekanisme *fail-safe*: kegagalan pengiriman (misal gateway down/timeout) tidak akan memutus proses utama aplikasi (*graceful failure*).
+- **Pengingat Piket Petugas Otomatis (FR-40)**:
+  - Membuat Artisan Command `duty:send-reminders` (`SendDutyRemindersCommand`) yang mendukung parameter `--date` dan opsi `--force`.
+  - Terintegrasi dengan `DutyScheduleService::getEffectiveOfficersForDate()` untuk memastikan pengingat terkirim ke petugas efektif yang sebenarnya bertugas hari itu (memperhitungkan riwayat swap).
+  - Melewati pengiriman pada hari akhir pekan (Sabtu & Minggu).
+  - Menjadwalkan pengingat piket di `routes/console.php` pada pukul 07:00 WIB setiap hari kerja (`weekdays`) dengan zona waktu `Asia/Jakarta`.
+- **Pengiriman Otomatis Tautan SKM (FR-41)**:
+  - Mengintegrasikan pemicu pengiriman survei SKM pada `PetugasController::finishService` (layanan kios) dan `PetugasController::updateOnlineStatus` (layanan online).
+  - Mengambil URL resmi SKM dari tabel pengaturan (`settings.skm_url`). Jika belum diisi, pengiriman dilewati dengan catatan peringatan pada log tanpa error bagi pengguna.
+  - Memperbarui timestamp `visits.skm_sent_at` saat notifikasi survei berhasil dikirim.
+- **Fitur Tambahan: Impor Jadwal Piket via CSV (Permintaan Pengguna #2)**:
+  - Menambahkan aksi `downloadTemplate()` pada `DutyScheduleController` yang menghasilkan file CSV contoh dengan header UTF-8 BOM (`tanggal,username,catatan_opsional`).
+  - Mengembangkan aksi `importCsv()` untuk memvalidasi dan memproses unggahan file CSV secara massal dengan opsi timpa (*overwrite*).
+  - Menambahkan antarmuka modal unggah file CSV di `resources/views/admin/schedules/index.blade.php`.
+- **Dokumentasi Scheduler & Panduan Penggunaan**:
+  - Mendokumentasikan konfigurasi Windows Task Scheduler dan cPanel Cron Jobs di `README.md`.
+  - Menjelaskan perbedaan fungsional antara formulir online (`/layanan`, tanpa foto) dan kios lobi kantor (`/kios`, wajib foto & cetak struk) serta cara aktivasi perangkat kios.
+- **Pengujian & Verifikasi**:
+  - Menulis 12 pengujian komprehensif di `tests/Feature/NotificationTest.php`.
+  - Menjalankan seluruh test suite aplikasi: **102 test lulus 100% (335 assertions)**.
+  - Membangun aset front-end produksi via `npm run build`.
+
+**Hasil:** ✅ Berhasil. Seluruh kebutuhan notifikasi (Fase 6), scheduler, pengiriman SKM, dan impor jadwal CSV selesai dan teruji penuh.
+**File penting:**
+- `config/notification.php`
+- `app/Contracts/NotificationDriverInterface.php`
+- `app/Services/Notification/NotificationService.php`
+- `app/Services/Notification/Drivers/LogDriver.php`
+- `app/Services/Notification/Drivers/MailDriver.php`
+- `app/Services/Notification/Drivers/WhatsAppDriver.php`
+- `app/Console/Commands/SendDutyRemindersCommand.php`
+- `routes/console.php`
+- `app/Http/Controllers/PetugasController.php`
+- `app/Http/Controllers/Admin/DutyScheduleController.php`
+- `resources/views/admin/schedules/index.blade.php`
+- `tests/Feature/NotificationTest.php`
+- `README.md`
+**Masalah & solusi:**
+- Menemukan bahwa pengujian CLI membutuhkan eksekusi path PHP lokal Laragon (`C:\laragon\bin\php\php-8.3.36-Win32-vs16-x64\php.exe`). Semua test berhasil dijalankan dengan hasil 100% lulus.
+**Langkah berikutnya:** Fase 7 — Hardening, audit keamanan, retensi foto 365 hari, dan pengujian kesiapan rilis.
 
 ### 2026-10-27 — Fase 5 — Antigravity (Gemini 3.8 Flash)
 **Dikerjakan:**
