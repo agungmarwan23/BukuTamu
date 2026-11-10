@@ -418,4 +418,43 @@ class AdminTest extends TestCase
         $resDirect->assertSee('Tamu Langsung');
         $resDirect->assertDontSee('Tamu Riwayat Impor');
     }
+
+    public function test_admin_can_update_visit_status_and_officer_note(): void
+    {
+        $officer = User::factory()->petugas()->create([
+            'name' => 'Petugas Ditugaskan',
+        ]);
+
+        $pastVisit = Visit::factory()->create([
+            'visit_date' => now()->subDays(2)->toDateString(),
+            'channel' => 'kiosk',
+            'status' => 'menunggu',
+            'assigned_officer_id' => null,
+            'officer_note' => null,
+        ]);
+
+        $response = $this->actingAs($this->admin)
+            ->put(route('admin.visits.update', $pastVisit), [
+                'status' => 'selesai',
+                'assigned_officer_id' => $officer->id,
+                'officer_note' => 'Diselesaikan secara manual oleh admin karena terlewat',
+            ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('success');
+
+        $pastVisit->refresh();
+        $this->assertEquals('selesai', $pastVisit->status);
+        $this->assertEquals($officer->id, $pastVisit->assigned_officer_id);
+        $this->assertEquals('Diselesaikan secara manual oleh admin karena terlewat', $pastVisit->officer_note);
+        $this->assertNotNull($pastVisit->finished_at);
+
+        // Pastikan transisi status tercatat di status_logs
+        $this->assertDatabaseHas('visit_status_logs', [
+            'visit_id' => $pastVisit->id,
+            'from_status' => 'menunggu',
+            'to_status' => 'selesai',
+            'user_id' => $this->admin->id,
+        ]);
+    }
 }

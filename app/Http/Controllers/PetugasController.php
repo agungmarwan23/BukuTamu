@@ -32,16 +32,50 @@ class PetugasController extends Controller
         $tab = $request->query('tab', 'antrean');
         $today = now()->toDateString();
 
-        // 1. Tab Antrean Saya (Kios hari ini)
-        $antreanQuery = Visit::whereDate('visit_date', $today)
-            ->where('channel', 'kiosk')
-            ->with(['attachments', 'assignedOfficer']);
+        // 1. Tab Antrean Saya (Kios / Offline)
+        $antreanPreset = $request->query('antrean_preset');
+        $antreanDate = $request->query('antrean_date');
+        $antreanStartDate = $request->query('antrean_start_date');
+        $antreanEndDate = $request->query('antrean_end_date');
+        $antreanStatus = $request->query('antrean_status');
+
+        $antreanQuery = Visit::where('channel', 'kiosk')
+            ->with(['attachments', 'assignedOfficer'])
+            ->orderByDesc('visit_date')
+            ->orderBy('queue_seq');
 
         if (! $user->isAdmin()) {
-            $antreanQuery->where('assigned_officer_id', $user->id);
+            $antreanQuery->where(function ($q) use ($user) {
+                $q->where('assigned_officer_id', $user->id)
+                  ->orWhereNull('assigned_officer_id');
+            });
         }
 
-        $myVisits = $antreanQuery->orderBy('queue_seq')->get();
+        // Filter tanggal
+        if ($antreanStartDate && $antreanEndDate) {
+            $antreanQuery->whereBetween('visit_date', [$antreanStartDate, $antreanEndDate]);
+            $antreanPreset = 'custom';
+        } elseif ($antreanDate) {
+            $antreanQuery->whereDate('visit_date', $antreanDate);
+            $antreanPreset = 'custom';
+        } elseif ($antreanPreset === 'all') {
+            // Tampilkan semua tanggal tanpa filter
+        } elseif ($antreanPreset === 'yesterday') {
+            $antreanQuery->whereDate('visit_date', now()->subDay()->toDateString());
+        } elseif ($antreanPreset === 'this_month') {
+            $antreanQuery->whereBetween('visit_date', [now()->startOfMonth()->toDateString(), now()->endOfMonth()->toDateString()]);
+        } else {
+            // Default: hari ini
+            $antreanPreset = 'today';
+            $antreanQuery->whereDate('visit_date', $today);
+        }
+
+        // Filter status
+        if ($antreanStatus) {
+            $antreanQuery->where('status', $antreanStatus);
+        }
+
+        $myVisits = $antreanQuery->get();
 
         $stats = [
             'total' => $myVisits->count(),
@@ -53,6 +87,12 @@ class PetugasController extends Controller
         ];
 
         // 2. Tab Permintaan Online
+        $onlineDate = $request->query('online_date');
+        $onlineStartDate = $request->query('online_start_date');
+        $onlineEndDate = $request->query('online_end_date');
+        $onlineStatus = $request->query('online_status');
+        $onlineSearch = $request->query('online_search');
+
         $onlineQuery = Visit::where('channel', 'online')
             ->with(['attachments', 'assignedOfficer'])
             ->latest('created_at');
@@ -64,7 +104,27 @@ class PetugasController extends Controller
             });
         }
 
-        $onlineVisits = $onlineQuery->paginate(15, ['*'], 'online_page');
+        if ($onlineStartDate && $onlineEndDate) {
+            $onlineQuery->whereBetween('visit_date', [$onlineStartDate, $onlineEndDate]);
+        } elseif ($onlineDate) {
+            $onlineQuery->whereDate('visit_date', $onlineDate);
+        }
+
+        if ($onlineStatus) {
+            $onlineQuery->where('status', $onlineStatus);
+        }
+
+        if ($onlineSearch) {
+            $search = '%' . trim($onlineSearch) . '%';
+            $onlineQuery->where(function ($q) use ($search) {
+                $q->where('full_name', 'like', $search)
+                  ->orWhere('ticket_code', 'like', $search)
+                  ->orWhere('institution', 'like', $search)
+                  ->orWhere('phone', 'like', $search);
+            });
+        }
+
+        $onlineVisits = $onlineQuery->paginate(15, ['*'], 'online_page')->withQueryString();
 
         // 3. Tab Jadwal Saya
         $startDate = now()->startOfMonth()->toDateString();
@@ -104,7 +164,17 @@ class PetugasController extends Controller
             'upcomingDutyDates',
             'availableOfficers',
             'swapHistory',
-            'today'
+            'today',
+            'antreanPreset',
+            'antreanDate',
+            'antreanStartDate',
+            'antreanEndDate',
+            'antreanStatus',
+            'onlineDate',
+            'onlineStartDate',
+            'onlineEndDate',
+            'onlineStatus',
+            'onlineSearch'
         ));
     }
 
@@ -144,18 +214,18 @@ class PetugasController extends Controller
     }
 
     /**
-     * Petugas menyelesaikan layanan tamu: status → selesai + simpan catatan layanan.
+     * Petugas menyelesaikan layanan tamu: status → selesai + simpan / edit catatan layanan.
      */
     public function finishService(Request $request, Visit $visit): RedirectResponse
     {
         $user = Auth::user();
 
-        if (! $user->isAdmin() && $visit->assigned_officer_id !== $user->id) {
-            abort(403, 'Anda tidak memiliki hak untuk menyelesaikan tiket ini.');
+        if (! $user->isAdmin() && $visit->assigned_officer_id !== null && $visit->assigned_officer_id !== $user->id) {
+            abort(403, 'Anda tidak memiliki hak untuk memproses tiket ini.');
         }
 
-        if ($visit->status !== 'dilayani') {
-            return back()->with('error', 'Hanya tiket berstatus "Sedang Dilayani" yang dapat diselesaikan.');
+        if (! in_array($visit->status, ['dilayani', 'selesai'])) {
+            return back()->with('error', 'Hanya tiket berstatus "Sedang Dilayani" atau "Selesai" yang dapat diproses.');
         }
 
         $request->validate([
@@ -163,25 +233,31 @@ class PetugasController extends Controller
         ]);
 
         $oldStatus = $visit->status;
+        $isAlreadyFinished = $oldStatus === 'selesai';
 
         $visit->update([
             'status' => 'selesai',
-            'finished_at' => now(),
+            'assigned_officer_id' => $visit->assigned_officer_id ?: $user->id,
+            'finished_at' => $visit->finished_at ?: now(),
             'officer_note' => $request->input('officer_note'),
         ]);
 
-        VisitStatusLog::create([
-            'visit_id' => $visit->id,
-            'from_status' => $oldStatus,
-            'to_status' => 'selesai',
-            'user_id' => $user->id,
-            'created_at' => now(),
-        ]);
+        if (! $isAlreadyFinished) {
+            VisitStatusLog::create([
+                'visit_id' => $visit->id,
+                'from_status' => $oldStatus,
+                'to_status' => 'selesai',
+                'user_id' => $user->id,
+                'created_at' => now(),
+            ]);
 
-        // Kirim survei SKM otomatis jika URL SKM sudah diatur (FR-41)
-        $this->notificationService->sendSkmSurvey($visit->fresh());
+            // Kirim survei SKM otomatis jika URL SKM sudah diatur (FR-41)
+            $this->notificationService->sendSkmSurvey($visit->fresh());
 
-        return back()->with('success', "Layanan untuk nomor {$visit->queue_number} berhasil diselesaikan.");
+            return back()->with('success', "Layanan untuk nomor {$visit->queue_number} berhasil diselesaikan.");
+        }
+
+        return back()->with('success', "Catatan layanan untuk nomor {$visit->queue_number} berhasil diperbarui.");
     }
 
     /**

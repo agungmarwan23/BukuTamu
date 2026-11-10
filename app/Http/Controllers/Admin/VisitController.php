@@ -97,7 +97,55 @@ class VisitController extends Controller
     {
         $visit->load(['assignedOfficer', 'attachments', 'statusLogs.user', 'callEvents.caller']);
 
-        return view('admin.visits.show', compact('visit'));
+        $officers = User::whereIn('role', ['petugas', 'admin'])
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+
+        return view('admin.visits.show', compact('visit', 'officers'));
+    }
+
+    /**
+     * Memperbarui status, petugas penanggung jawab, dan catatan layanan oleh Admin.
+     */
+    public function update(Request $request, Visit $visit): RedirectResponse
+    {
+        $validated = $request->validate([
+            'status' => 'required|in:menunggu,dipanggil,dilayani,selesai,tidak_hadir,dibatalkan',
+            'assigned_officer_id' => 'nullable|exists:users,id',
+            'officer_note' => 'nullable|string|max:2000',
+        ]);
+
+        $oldStatus = $visit->status;
+        $newStatus = $validated['status'];
+
+        $updates = [
+            'status' => $newStatus,
+            'assigned_officer_id' => $validated['assigned_officer_id'] ?? null,
+            'officer_note' => $validated['officer_note'] ?? null,
+        ];
+
+        if ($newStatus === 'dilayani' && ! $visit->started_at) {
+            $updates['started_at'] = now();
+        }
+
+        if ($newStatus === 'selesai' && ! $visit->finished_at) {
+            $updates['finished_at'] = now();
+        }
+
+        $visit->update($updates);
+
+        if ($oldStatus !== $newStatus) {
+            VisitStatusLog::create([
+                'visit_id' => $visit->id,
+                'from_status' => $oldStatus,
+                'to_status' => $newStatus,
+                'user_id' => Auth::id(),
+                'created_at' => now(),
+            ]);
+        }
+
+        return back()->with('success', "Data kunjungan {$visit->ticket_code} berhasil diperbarui.");
     }
 
     /**

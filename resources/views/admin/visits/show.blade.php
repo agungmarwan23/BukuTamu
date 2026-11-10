@@ -26,6 +26,26 @@
     <div class="py-6">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
 
+            <!-- Flash Alert -->
+            @if (session('success'))
+                <div class="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm flex items-center gap-3">
+                    <svg class="w-5 h-5 text-emerald-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                    <span>{{ session('success') }}</span>
+                </div>
+            @endif
+
+            @if ($errors->any())
+                <div class="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm">
+                    <ul class="list-disc list-inside space-y-1">
+                        @foreach ($errors->all() as $err)
+                            <li>{{ $err }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
                 <!-- Kolom Kiri: Profil Tamu & Foto -->
@@ -169,6 +189,69 @@
                                 </div>
                             @endif
                         </div>
+                    </div>
+
+                    <!-- Formulir Kelola Status & Catatan (Khusus Admin) -->
+                    <div class="bg-white rounded-2xl border border-blue-200/80 shadow-sm p-6 space-y-4 bg-gradient-to-br from-white to-blue-50/20">
+                        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                            <div>
+                                <h4 class="font-bold text-slate-800 text-base flex items-center gap-2">
+                                    <span class="w-6 h-6 rounded-lg bg-blue-900 text-white flex items-center justify-center text-xs font-bold">⚙</span>
+                                    <span>Kelola Status & Catatan Layanan (Admin)</span>
+                                </h4>
+                                <p class="text-xs text-slate-500 mt-0.5">Ubah status kunjungan terlewat atau perbarui catatan layanan petugas.</p>
+                            </div>
+                        </div>
+
+                        <form method="POST" action="{{ route('admin.visits.update', $visit) }}" class="space-y-4">
+                            @csrf
+                            @method('PUT')
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                                        Status Kunjungan <span class="text-red-500">*</span>
+                                    </label>
+                                    <select name="status" class="w-full text-xs rounded-xl border-slate-300 focus:border-blue-500 focus:ring-blue-500 font-semibold">
+                                        <option value="menunggu" {{ $visit->status === 'menunggu' ? 'selected' : '' }}>Menunggu (Antrean)</option>
+                                        <option value="dipanggil" {{ $visit->status === 'dipanggil' ? 'selected' : '' }}>Dipanggil</option>
+                                        <option value="dilayani" {{ $visit->status === 'dilayani' ? 'selected' : '' }}>Sedang Dilayani</option>
+                                        <option value="selesai" {{ $visit->status === 'selesai' ? 'selected' : '' }}>Selesai</option>
+                                        <option value="tidak_hadir" {{ $visit->status === 'tidak_hadir' ? 'selected' : '' }}>Tidak Hadir</option>
+                                        <option value="dibatalkan" {{ $visit->status === 'dibatalkan' ? 'selected' : '' }}>Dibatalkan</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                                        Petugas yang Melayani
+                                    </label>
+                                    <select name="assigned_officer_id" class="w-full text-xs rounded-xl border-slate-300 focus:border-blue-500 focus:ring-blue-500">
+                                        <option value="">-- Belum Ditugaskan --</option>
+                                        @foreach ($officers as $officer)
+                                            <option value="{{ $officer->id }}" {{ $visit->assigned_officer_id == $officer->id ? 'selected' : '' }}>
+                                                {{ $officer->name }} ({{ ucfirst($officer->role) }})
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                                    Catatan Hasil Layanan Petugas
+                                </label>
+                                <textarea name="officer_note" rows="3"
+                                    placeholder="Tuliskan catatan hasil layanan atau alasan penyesuaian status..."
+                                    class="w-full rounded-xl border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-xs">{{ old('officer_note', $visit->officer_note) }}</textarea>
+                            </div>
+
+                            <div class="flex items-center justify-end gap-2 pt-2">
+                                <button type="submit" class="px-5 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold shadow-sm transition">
+                                    Simpan Perubahan
+                                </button>
+                            </div>
+                        </form>
                     </div>
 
                     <!-- Riwayat Status & Jejak Audit (Audit Trail) -->

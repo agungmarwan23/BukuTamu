@@ -241,15 +241,22 @@
 
                                         <td class="px-4 py-3.5 text-center whitespace-nowrap">
                                             <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold {{ $v->status === 'selesai' ? 'bg-emerald-100 text-emerald-800' : ($v->status === 'dilayani' ? 'bg-indigo-100 text-indigo-800' : ($v->status === 'dipanggil' ? 'bg-blue-100 text-blue-800' : ($v->status === 'tidak_hadir' ? 'bg-slate-100 text-slate-600' : ($v->status === 'dibatalkan' ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-800')))) }}">
-                                                {{ ucfirst($v->status) }}
+                                                {{ ucfirst(str_replace('_', ' ', $v->status)) }}
                                             </span>
+                                            @if ($v->visit_date && $v->visit_date->lt(now()->startOfDay()) && in_array($v->status, ['menunggu', 'dipanggil', 'dilayani']))
+                                                <div class="mt-1">
+                                                    <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                                                        ⚠ Belum Selesai
+                                                    </span>
+                                                </div>
+                                            @endif
                                         </td>
 
                                         <td class="px-4 py-3.5 text-right whitespace-nowrap">
                                             <a href="{{ route('admin.visits.show', $v) }}"
-                                                class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors">
-                                                <span>Detail</span>
-                                                <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg {{ $v->visit_date && $v->visit_date->lt(now()->startOfDay()) && in_array($v->status, ['menunggu', 'dipanggil', 'dilayani']) ? 'bg-amber-600 hover:bg-amber-700 text-white shadow-sm' : 'bg-slate-100 hover:bg-slate-200 text-slate-700' }} text-xs font-bold transition-colors">
+                                                <span>{{ $v->visit_date && $v->visit_date->lt(now()->startOfDay()) && in_array($v->status, ['menunggu', 'dipanggil', 'dilayani']) ? 'Kelola' : 'Detail' }}</span>
+                                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                                                 </svg>
                                             </a>

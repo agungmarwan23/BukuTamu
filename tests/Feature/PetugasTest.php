@@ -412,4 +412,99 @@ class PetugasTest extends TestCase
         $visit->refresh();
         $this->assertEquals($this->petugas2->id, $visit->assigned_officer_id);
     }
+
+    public function test_petugas_can_edit_notes_for_completed_kiosk_visit(): void
+    {
+        $visit = Visit::factory()->create([
+            'visit_date' => now()->toDateString(),
+            'channel' => 'kiosk',
+            'status' => 'selesai',
+            'assigned_officer_id' => $this->petugas1->id,
+            'officer_note' => 'Catatan awal',
+        ]);
+
+        $response = $this->actingAs($this->petugas1)
+            ->post("/petugas/kunjungan/{$visit->id}/finish", [
+                'officer_note' => 'Catatan revisi setelah pelayanan selesai',
+            ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHas('success');
+
+        $visit->refresh();
+        $this->assertEquals('Catatan revisi setelah pelayanan selesai', $visit->officer_note);
+        $this->assertEquals('selesai', $visit->status);
+    }
+
+    public function test_petugas_can_filter_kiosk_visits_by_date_and_status(): void
+    {
+        $yesterday = now()->subDay()->toDateString();
+        $today = now()->toDateString();
+
+        $visitToday = Visit::factory()->create([
+            'visit_date' => $today,
+            'channel' => 'kiosk',
+            'status' => 'menunggu',
+            'assigned_officer_id' => $this->petugas1->id,
+            'full_name' => 'Tamu Hari Ini',
+        ]);
+
+        $visitYesterday = Visit::factory()->create([
+            'visit_date' => $yesterday,
+            'channel' => 'kiosk',
+            'status' => 'selesai',
+            'assigned_officer_id' => $this->petugas1->id,
+            'full_name' => 'Tamu Kemarin',
+        ]);
+
+        // Default: hanya hari ini
+        $resDefault = $this->actingAs($this->petugas1)->get('/petugas?tab=antrean');
+        $resDefault->assertSee('Tamu Hari Ini');
+        $resDefault->assertDontSee('Tamu Kemarin');
+
+        // Filter semua tanggal
+        $resAll = $this->actingAs($this->petugas1)->get('/petugas?tab=antrean&antrean_preset=all');
+        $resAll->assertSee('Tamu Hari Ini');
+        $resAll->assertSee('Tamu Kemarin');
+
+        // Filter tanggal kemarin
+        $resYesterday = $this->actingAs($this->petugas1)->get('/petugas?tab=antrean&antrean_preset=yesterday');
+        $resYesterday->assertSee('Tamu Kemarin');
+        $resYesterday->assertDontSee('Tamu Hari Ini');
+
+        // Filter status selesai
+        $resStatus = $this->actingAs($this->petugas1)->get('/petugas?tab=antrean&antrean_preset=all&antrean_status=selesai');
+        $resStatus->assertSee('Tamu Kemarin');
+        $resStatus->assertDontSee('Tamu Hari Ini');
+    }
+
+    public function test_petugas_can_filter_online_visits_by_date_and_status(): void
+    {
+        $yesterday = now()->subDay()->toDateString();
+        $today = now()->toDateString();
+
+        Visit::factory()->create([
+            'visit_date' => $today,
+            'channel' => 'online',
+            'status' => 'menunggu',
+            'full_name' => 'Online Menunggu',
+        ]);
+
+        Visit::factory()->create([
+            'visit_date' => $yesterday,
+            'channel' => 'online',
+            'status' => 'selesai',
+            'full_name' => 'Online Selesai',
+        ]);
+
+        // Filter status menunggu
+        $resMenunggu = $this->actingAs($this->petugas1)->get('/petugas?tab=online&online_status=menunggu');
+        $resMenunggu->assertSee('Online Menunggu');
+        $resMenunggu->assertDontSee('Online Selesai');
+
+        // Filter status selesai
+        $resSelesai = $this->actingAs($this->petugas1)->get('/petugas?tab=online&online_status=selesai');
+        $resSelesai->assertSee('Online Selesai');
+        $resSelesai->assertDontSee('Online Menunggu');
+    }
 }

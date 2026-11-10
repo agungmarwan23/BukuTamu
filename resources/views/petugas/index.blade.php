@@ -143,17 +143,79 @@
 
                 <!-- Daftar Antrean Kios -->
                 <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                    <div class="px-6 py-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-slate-50">
-                        <div>
-                            <h3 class="font-bold text-slate-800 text-base">Daftar Antrean Tamu Kios Hari Ini</h3>
-                            <p class="text-xs text-slate-500">
-                                @if (Auth::user()->isAdmin())
-                                    Mode Admin: Menampilkan seluruh antrean kios lobi hari ini.
-                                @else
-                                    Menampilkan antrean yang ditugaskan kepada Anda.
-                                @endif
-                            </p>
+                    <div class="p-6 border-b border-slate-200 bg-slate-50/70 space-y-4">
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <div>
+                                <h3 class="font-bold text-slate-800 text-base">Daftar Antrean Tamu Kios (Layanan Offline)</h3>
+                                <p class="text-xs text-slate-500">
+                                    @if (Auth::user()->isAdmin())
+                                        Mode Admin: Menampilkan seluruh antrean tamu kios kantor.
+                                    @else
+                                        Menampilkan antrean yang ditugaskan kepada Anda atau belum ditugaskan.
+                                    @endif
+                                </p>
+                            </div>
+                            
+                            <!-- Tombol Shortcut Preset Tanggal -->
+                            <div class="flex items-center flex-wrap gap-1.5">
+                                <a href="{{ route('petugas.index', ['tab' => 'antrean', 'antrean_preset' => 'today']) }}"
+                                    class="px-3 py-1.5 rounded-lg text-xs font-semibold transition {{ ($antreanPreset ?? 'today') === 'today' ? 'bg-blue-900 text-white shadow-sm' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100' }}">
+                                    Hari Ini
+                                </a>
+                                <a href="{{ route('petugas.index', ['tab' => 'antrean', 'antrean_preset' => 'yesterday']) }}"
+                                    class="px-3 py-1.5 rounded-lg text-xs font-semibold transition {{ ($antreanPreset ?? '') === 'yesterday' ? 'bg-blue-900 text-white shadow-sm' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100' }}">
+                                    Kemarin
+                                </a>
+                                <a href="{{ route('petugas.index', ['tab' => 'antrean', 'antrean_preset' => 'this_month']) }}"
+                                    class="px-3 py-1.5 rounded-lg text-xs font-semibold transition {{ ($antreanPreset ?? '') === 'this_month' ? 'bg-blue-900 text-white shadow-sm' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100' }}">
+                                    Bulan Ini
+                                </a>
+                                <a href="{{ route('petugas.index', ['tab' => 'antrean', 'antrean_preset' => 'all']) }}"
+                                    class="px-3 py-1.5 rounded-lg text-xs font-semibold transition {{ ($antreanPreset ?? '') === 'all' ? 'bg-blue-900 text-white shadow-sm' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100' }}">
+                                    Semua Tanggal
+                                </a>
+                            </div>
                         </div>
+
+                        <!-- Baris Filter Kustom Tanggal & Status -->
+                        <form method="GET" action="{{ route('petugas.index') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-2 border-t border-slate-200/60">
+                            <input type="hidden" name="tab" value="antrean">
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Tanggal Tunggal</label>
+                                <input type="date" name="antrean_date" value="{{ $antreanDate }}"
+                                    class="w-full text-xs rounded-xl border-slate-300 focus:border-blue-500 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Dari Tanggal</label>
+                                <input type="date" name="antrean_start_date" value="{{ $antreanStartDate }}"
+                                    class="w-full text-xs rounded-xl border-slate-300 focus:border-blue-500 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Sampai Tanggal</label>
+                                <input type="date" name="antrean_end_date" value="{{ $antreanEndDate }}"
+                                    class="w-full text-xs rounded-xl border-slate-300 focus:border-blue-500 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Status</label>
+                                <select name="antrean_status" class="w-full text-xs rounded-xl border-slate-300 focus:border-blue-500 focus:ring-blue-500">
+                                    <option value="">Semua Status</option>
+                                    <option value="menunggu" {{ $antreanStatus === 'menunggu' ? 'selected' : '' }}>Menunggu</option>
+                                    <option value="dipanggil" {{ $antreanStatus === 'dipanggil' ? 'selected' : '' }}>Dipanggil</option>
+                                    <option value="dilayani" {{ $antreanStatus === 'dilayani' ? 'selected' : '' }}>Sedang Dilayani</option>
+                                    <option value="selesai" {{ $antreanStatus === 'selesai' ? 'selected' : '' }}>Selesai</option>
+                                    <option value="tidak_hadir" {{ $antreanStatus === 'tidak_hadir' ? 'selected' : '' }}>Tidak Hadir</option>
+                                    <option value="dibatalkan" {{ $antreanStatus === 'dibatalkan' ? 'selected' : '' }}>Dibatalkan</option>
+                                </select>
+                            </div>
+                            <div class="flex items-end gap-2">
+                                <button type="submit" class="flex-1 px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold transition">
+                                    Terapkan Filter
+                                </button>
+                                <a href="{{ route('petugas.index', ['tab' => 'antrean']) }}" class="px-3 py-2 bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl text-xs font-semibold transition" title="Reset Filter">
+                                    Reset
+                                </a>
+                            </div>
+                        </form>
                     </div>
 
                     @if ($myVisits->isEmpty())
@@ -338,7 +400,7 @@
                                                     <!-- Tombol Selesai Layani (Modal) -->
                                                     @if ($visit->status === 'dilayani')
                                                         <button type="button"
-                                                            @click="activeFinishModal = {{ $visit->id }}; selectedVisit = {{ json_encode(['id' => $visit->id, 'queue_number' => $visit->queue_number, 'full_name' => $visit->full_name]) }}"
+                                                            @click="activeFinishModal = {{ $visit->id }}; selectedVisit = {{ json_encode(['id' => $visit->id, 'queue_number' => $visit->queue_number, 'full_name' => $visit->full_name, 'officer_note' => $visit->officer_note, 'status' => $visit->status]) }}"
                                                             class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors">
                                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -347,10 +409,23 @@
                                                         </button>
                                                     @endif
 
+                                                    <!-- Tombol Edit Catatan Layanan (Jika sudah selesai) -->
+                                                    @if ($visit->status === 'selesai')
+                                                        <button type="button"
+                                                            @click="activeFinishModal = {{ $visit->id }}; selectedVisit = {{ json_encode(['id' => $visit->id, 'queue_number' => $visit->queue_number, 'full_name' => $visit->full_name, 'officer_note' => $visit->officer_note, 'status' => $visit->status]) }}"
+                                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors"
+                                                            title="Ubah / lengkapi catatan layanan">
+                                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                                            </svg>
+                                                            <span>Edit Catatan</span>
+                                                        </button>
+                                                    @endif
+
                                                     <!-- Tombol Opsi Tambahan (Tidak Hadir / Batalkan) -->
                                                     @if (in_array($visit->status, ['menunggu', 'dipanggil', 'dilayani']))
                                                         <button type="button"
-                                                            @click="activeCancelModal = {{ $visit->id }}; selectedVisit = {{ json_encode(['id' => $visit->id, 'queue_number' => $visit->queue_number, 'full_name' => $visit->full_name]) }}"
+                                                            @click="activeCancelModal = {{ $visit->id }}; selectedVisit = {{ json_encode(['id' => $visit->id, 'queue_number' => $visit->queue_number, 'full_name' => $visit->full_name, 'officer_note' => $visit->officer_note, 'status' => $visit->status]) }}"
                                                             title="Opsi status lainnya"
                                                             class="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
                                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -374,11 +449,56 @@
             <!-- ========================================== -->
             <div x-show="activeTab === 'online'" x-transition class="space-y-6" style="display: none;">
                 <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                    <div class="px-6 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
-                        <div>
-                            <h3 class="font-bold text-slate-800 text-base">Permintaan Layanan Tamu Online</h3>
-                            <p class="text-xs text-slate-500">Tindak lanjuti permohonan konsultasi via email atau WhatsApp.</p>
+                    <div class="p-6 border-b border-slate-200 bg-slate-50/70 space-y-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="font-bold text-slate-800 text-base">Permintaan Layanan Tamu Online</h3>
+                                <p class="text-xs text-slate-500">Tindak lanjuti permohonan konsultasi via email atau WhatsApp.</p>
+                            </div>
                         </div>
+
+                        <!-- Filter Bar Permintaan Online -->
+                        <form method="GET" action="{{ route('petugas.index') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 pt-2 border-t border-slate-200/60">
+                            <input type="hidden" name="tab" value="online">
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Tanggal Tunggal</label>
+                                <input type="date" name="online_date" value="{{ $onlineDate }}"
+                                    class="w-full text-xs rounded-xl border-slate-300 focus:border-blue-500 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Dari Tanggal</label>
+                                <input type="date" name="online_start_date" value="{{ $onlineStartDate }}"
+                                    class="w-full text-xs rounded-xl border-slate-300 focus:border-blue-500 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Sampai Tanggal</label>
+                                <input type="date" name="online_end_date" value="{{ $onlineEndDate }}"
+                                    class="w-full text-xs rounded-xl border-slate-300 focus:border-blue-500 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Status</label>
+                                <select name="online_status" class="w-full text-xs rounded-xl border-slate-300 focus:border-blue-500 focus:ring-blue-500">
+                                    <option value="">Semua Status</option>
+                                    <option value="menunggu" {{ $onlineStatus === 'menunggu' ? 'selected' : '' }}>Menunggu</option>
+                                    <option value="dilayani" {{ $onlineStatus === 'dilayani' ? 'selected' : '' }}>Sedang Diproses</option>
+                                    <option value="selesai" {{ $onlineStatus === 'selesai' ? 'selected' : '' }}>Selesai</option>
+                                    <option value="dibatalkan" {{ $onlineStatus === 'dibatalkan' ? 'selected' : '' }}>Dibatalkan</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-600 uppercase mb-1">Cari Tamu / Tiket</label>
+                                <input type="text" name="online_search" value="{{ $onlineSearch }}" placeholder="Nama / Kode..."
+                                    class="w-full text-xs rounded-xl border-slate-300 focus:border-blue-500 focus:ring-blue-500">
+                            </div>
+                            <div class="flex items-end gap-2">
+                                <button type="submit" class="flex-1 px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-xs font-bold transition">
+                                    Terapkan Filter
+                                </button>
+                                <a href="{{ route('petugas.index', ['tab' => 'online']) }}" class="px-3 py-2 bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl text-xs font-semibold transition" title="Reset Filter">
+                                    Reset
+                                </a>
+                            </div>
+                        </form>
                     </div>
 
                     @if ($onlineVisits->isEmpty())
@@ -699,10 +819,10 @@
                         <div class="p-6 space-y-4">
                             <div class="flex items-center gap-3">
                                 <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
-                                    ✓
+                                    <span x-text="selectedVisit && selectedVisit.status === 'selesai' ? '✎' : '✓'"></span>
                                 </div>
                                 <div>
-                                    <h4 class="font-bold text-slate-900 text-base">Selesaikan Layanan Tamu</h4>
+                                    <h4 class="font-bold text-slate-900 text-base" x-text="selectedVisit && selectedVisit.status === 'selesai' ? 'Edit Catatan Layanan Tamu' : 'Selesaikan Layanan Tamu'"></h4>
                                     <p class="text-xs text-slate-500" x-text="'Nomor: ' + (selectedVisit ? selectedVisit.queue_number : '') + ' • ' + (selectedVisit ? selectedVisit.full_name : '')"></p>
                                 </div>
                             </div>
@@ -712,6 +832,7 @@
                                     Catatan Hasil Layanan (Opsional)
                                 </label>
                                 <textarea name="officer_note" rows="4"
+                                    x-text="selectedVisit ? (selectedVisit.officer_note || '') : ''"
                                     placeholder="Contoh: Tamu telah diberikan data inflasi kab. Inhil 2025 dan rekomendasi metodologi survei..."
                                     class="w-full rounded-xl border-slate-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500 text-sm"></textarea>
                                 <p class="text-[11px] text-slate-400 mt-1">Catatan ini akan tersimpan sebagai bukti pelayanan dan laporan bulanan.</p>
@@ -724,8 +845,8 @@
                                 Batal
                             </button>
                             <button type="submit"
-                                class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm transition-colors">
-                                Konfirmasi Selesai
+                                class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm transition-colors"
+                                x-text="selectedVisit && selectedVisit.status === 'selesai' ? 'Simpan Catatan' : 'Konfirmasi Selesai'">
                             </button>
                         </div>
                     </form>

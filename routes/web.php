@@ -72,12 +72,13 @@ Route::middleware(['auth', 'role:admin,resepsionis,petugas'])->group(function ()
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/', [AdminDashboardController::class, 'index'])->name('dashboard');
 
-    // Daftar Kunjungan, Detail, Ekspor, dan Impor (FR-30, FR-34)
+    // Daftar Kunjungan, Detail, Update, Ekspor, dan Impor (FR-30, FR-34)
     Route::get('/kunjungan', [AdminVisitController::class, 'index'])->name('visits.index');
     Route::get('/kunjungan/ekspor', [AdminVisitController::class, 'export'])->name('visits.export');
     Route::get('/kunjungan/template', [AdminVisitController::class, 'downloadTemplate'])->name('visits.template');
     Route::post('/kunjungan/import', [AdminVisitController::class, 'importCsv'])->name('visits.import');
     Route::get('/kunjungan/{visit}', [AdminVisitController::class, 'show'])->name('visits.show');
+    Route::put('/kunjungan/{visit}', [AdminVisitController::class, 'update'])->name('visits.update');
 
     // Jadwal Piket & Penugasan Massal (FR-32)
     Route::get('/jadwal', [AdminDutyScheduleController::class, 'index'])->name('schedules.index');
