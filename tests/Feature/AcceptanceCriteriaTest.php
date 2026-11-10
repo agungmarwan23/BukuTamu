@@ -356,15 +356,14 @@ class AcceptanceCriteriaTest extends TestCase
     }
 
     /**
-     * AC-8: /kios ditolak (403 Forbidden) dari perangkat yang belum didaftarkan admin.
+     * AC-8: /kios dapat diakses langsung via link tanpa perlu pendaftaran perangkat token.
      */
-    public function test_ac_08_kiosk_route_returns_403_for_unregistered_devices(): void
+    public function test_ac_08_kiosk_route_is_accessible_directly_without_device_token(): void
     {
         $response = $this->get('/kios');
 
-        $response->assertStatus(403);
-        $response->assertSee('Akses Ditolak');
-        $response->assertSee('kiosk:register');
+        $response->assertStatus(200);
+        $response->assertSee('Buku Tamu');
     }
 
     /**

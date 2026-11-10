@@ -27,11 +27,12 @@ class GuestVisitTest extends TestCase
         return [$device, $rawToken];
     }
 
-    public function test_unregistered_device_cannot_access_kiosk(): void
+    public function test_kiosk_form_is_accessible_directly(): void
     {
         $response = $this->get('/kios');
 
-        $response->assertStatus(403);
+        $response->assertStatus(200);
+        $response->assertSee('KIOS BUKU TAMU DIGITAL');
     }
 
     public function test_kiosk_activation_sets_cookie_and_allows_access(): void
@@ -42,16 +43,6 @@ class GuestVisitTest extends TestCase
 
         $response->assertRedirect('/kios');
         $response->assertCookie('kiosk_device_token', $token);
-    }
-
-    public function test_registered_device_can_access_kiosk(): void
-    {
-        [$device, $token] = $this->createKioskDevice();
-
-        $response = $this->withCookie('kiosk_device_token', $token)->get('/kios');
-
-        $response->assertStatus(200);
-        $response->assertSee('KIOS BUKU TAMU DIGITAL');
     }
 
     public function test_online_form_is_accessible_to_public(): void

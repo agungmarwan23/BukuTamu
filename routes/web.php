@@ -33,11 +33,11 @@ Route::prefix('layanan')->name('layanan.')->group(function () {
     Route::get('/sukses/{ticket_code}', [GuestVisitController::class, 'onlineSuccess'])->name('success');
 });
 
-// Aktivasi Perangkat Kios (sebelum middleware proteksi)
+// Aktivasi Perangkat Kios (opsional untuk kompatibilitas tautan lama)
 Route::get('/kios/activate/{token}', [KioskDeviceController::class, 'activate'])->name('kios.activate');
 
-// Mode Kios Lobi (hanya dapat diakses perangkat terdaftar)
-Route::middleware('kiosk.device')->prefix('kios')->name('kios.')->group(function () {
+// Mode Kios Lobi (dapat diakses langsung tanpa registrasi perangkat)
+Route::prefix('kios')->name('kios.')->group(function () {
     Route::get('/', [GuestVisitController::class, 'kioskForm'])->name('index');
     Route::post('/', [GuestVisitController::class, 'store'])
         ->middleware('throttle:15,1')

@@ -52,7 +52,7 @@ Akun dibuat oleh admin. Resepsionis boleh dirangkap admin (lihat Asumsi A3).
 - **FR-05 Validasi:** sisi klien dan server; email valid; no. HP dinormalisasi ke format `62…`.
 - **FR-06 Layar sukses (kios):** menampilkan nomor antrean besar + tombol **Cetak Nomor Antrean** (cetak manual lewat tombol, bisa diulang); auto-reset ke form kosong setelah ±30 detik. Layar sukses online menampilkan kode tiket dan informasi bahwa petugas akan menghubungi.
 - **FR-07 Responsive:** dioptimalkan untuk tablet (landscape & portrait), target sentuh besar.
-- **FR-08 Mode kios:** halaman `/kios` hanya bisa dibuka dari perangkat yang sudah didaftarkan admin (token perangkat), berisi form lengkap dengan foto + antrean + cetak. Pembeda tamu di kantor vs luar kantor tidak boleh bergantung pada pengakuan tamu atau alamat IP kantor.
+- **FR-08 Mode kios:** halaman `/kios` dapat diakses langsung via URL khusus perangkat lobi tanpa kewajiban token perangkat (menghindari kendala saat clear cache), berisi form lengkap dengan foto webcam + antrean harian + tombol cetak struk 58 mm. Pembeda tamu di kantor vs luar kantor berbasis pemisahan rute (`/kios` untuk lobi, `/layanan` untuk luar kantor).
 - **FR-09 Form online:** halaman publik `/layanan` (tanpa foto) dengan kolom yang sama, upload file opsional, kode tiket `ONL-xxxx`, tidak masuk antrean lobi/layar.
 
 ### 5.2 Antrean & Layar (Kiosk/Signage)
@@ -136,7 +136,7 @@ Aturan: `queue_number` unik per `visit_date`; jangan pernah `UPDATE` baris jadwa
 - Layar antrean tidak menampilkan nama tamu; suara terpicu hanya setelah tombol Panggil.
 - Foto tidak bisa dibuka lewat URL tanpa login.
 - Ekspor Excel memuat kolom sesuai filter yang dipilih.
-- `/kios` ditolak (403) dari perangkat yang belum didaftarkan admin.
+- `/kios` dapat diakses langsung via link tanpa token registrasi perangkat.
 - File foto lebih dari 365 hari terhapus otomatis, sedangkan data teks kunjungan tetap ada.
 
 ## 11. Asumsi & Pertanyaan Terbuka

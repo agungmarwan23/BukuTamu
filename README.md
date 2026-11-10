@@ -9,8 +9,7 @@ Sistem Informasi Buku Tamu Digital, Antrean Pelayanan Statistik Terpadu (PST), P
 | Rute / Modul | URL | Hak Akses | Keterangan |
 |---|---|---|---|
 | **Form Layanan Online** | `/layanan` (atau `/`) | Publik (Luar Kantor) | Formulir tamu online tanpa foto, upload dokumen pendukung opsional, menghasilkan kode tiket unik (`ONL-xxxx`). |
-| **Kios Lobi Kantor** | `/kios` | Perangkat Kios Terdaftar | Formulir khusus lobi kantor: pengambilan foto via webcam, cetak struk 58 mm, nomor antrean lobi (`PST-01`). |
-| **Aktivasi Perangkat Kios** | `/kios/activate/{token}` | Satu kali per perangkat | Digunakan untuk mendaftarkan browser PC kios lobi menggunakan token yang dibuat oleh Admin. |
+| **Kios Lobi Kantor** | `/kios` | Terbuka Langsung | Formulir khusus lobi kantor: pengambilan foto via webcam, cetak struk 58 mm, nomor antrean lobi (`PST-01`). Tanpa kewajiban token aktivasi perangkat. |
 | **Layar TV Antrean** | `/layar` | Publik (Display Lobi) | Layar display panggilan nomor antrean lobi dengan audio Text-to-Speech (TTS) bahasa Indonesia, tanpa menampilkan data pribadi tamu. |
 | **Dasbor Resepsionis** | `/resepsionis` | Resepsionis & Admin | Panggil nomor antrean berikutnya, panggil ulang, lewati, atau alihkan penugasan tiket ke petugas lain. |
 | **Portal Petugas** | `/petugas` | Petugas & Admin | Tab *Antrean Saya*, *Permintaan Online*, *Jadwal Piket Saya*, dan *Tukar (Swap) Piket*. |
@@ -138,23 +137,12 @@ Jalankan Chrome dalam mode fullscreen di layar kedua/TV:
 
 ---
 
-## 6. Pendaftaran & Aktivasi Perangkat Kios
+## 6. Akses Langsung Kios Lobi Kantor
 
-Sesuai FR-01, halaman `/kios` hanya dapat dibuka oleh perangkat yang telah disetujui Admin:
-
-### Cara Melalui Antarmuka Admin:
-1. Login sebagai Admin di `/admin/perangkat`.
-2. Klik tombol **+ Daftarkan Perangkat Baru** (masukkan misal: "PC Kios Lobi Utama").
-3. Salin URL aktivasi yang muncul (misal: `http://localhost:8000/kios/activate/{token}`).
-4. Buka URL tersebut pada peramban PC Kios lobi satu kali.
-5. Cookie rahasia `kiosk_device_token` akan tersimpan secara HTTP-only dan halaman `/kios` siap digunakan selamanya.
-
-### Cara Melalui Artisan CLI:
-Jalankan perintah ini di terminal server:
-```bash
-php artisan kiosk:register "PC Kios Lobi 1"
-```
-Terminal akan menampilkan URL aktivasi yang dapat langsung dibuka di PC Kios.
+Untuk mempermudah operasional lobi tanpa risiko token hilang saat clear cache atau incognito browser:
+- Halaman `/kios` dapat **langsung dibuka** di peramban PC Kios lobi.
+- Formulir lobi tetap dilengkapi penangkapan foto webcam, penomoran antrean harian lobi (`PST-01`), dan pencetakan struk thermal 58 mm.
+- Menu manajemen perangkat di `/admin/perangkat` dan perintah Artisan `kiosk:register` tetap disediakan sebagai inventaris opsional perangkat kantor.
 
 ---
 
@@ -236,8 +224,8 @@ php artisan test
 - **AC-5** (Layar TV dan API `/api/layar` tidak membocorkan nama/kontak tamu): **LULUS** (`test_ac_05`)
 - **AC-6** (Akses foto/lampiran privat wajib terautentikasi): **LULUS** (`test_ac_06`)
 - **AC-7** (Ekspor CSV sesuai filter aktif): **LULUS** (`test_ac_07`)
-- **AC-8** (Rute `/kios` menolak perangkat tidak terdaftar dengan kode 403): **LULUS** (`test_ac_08`)
+- **AC-8** (Rute `/kios` dapat diakses langsung via URL tanpa token registrasi): **LULUS** (`test_ac_08`)
 - **AC-9** (File foto > 365 hari terhapus otomatis, data teks tetap utuh): **LULUS** (`test_ac_09`)
 - **AC-10** (Security Headers dasar X-Content-Type-Options, X-Frame-Options, CSP/Permissions-Policy terpasang): **LULUS** (`test_ac_10`)
 
-**Hasil Pengujian Terakhir:** 116 tests passed, 417 assertions (100% Lulus).
+**Hasil Pengujian Terakhir:** 115 tests passed, 415 assertions (100% Lulus).

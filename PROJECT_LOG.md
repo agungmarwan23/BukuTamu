@@ -27,6 +27,7 @@ Aplikasi web buku tamu digital dan antrean layanan untuk BPS Kab. Indragiri Hili
 | Tamu online | Form dari luar kantor tanpa foto, upload file opsional; foto hanya untuk tamu di kantor | 2026-10-27 |
 | Retensi foto | 1 tahun (file dihapus otomatis, data teks tetap) | 2026-10-27 |
 | Printer | DT 58D (58 mm), terpasang di PC kios, dicetak lewat tombol Cetak | 2026-10-27 |
+| Akses Kios | Dibuka langsung via URL /kios tanpa kewajiban token aktivasi perangkat | 2026-11-10 |
 
 ## 3. Asumsi & pertanyaan terbuka
 Lihat `docs/PRD.md` bagian 11 (A1–A11). Saat satu terjawab, pindahkan ke tabel keputusan di atas.
@@ -59,6 +60,37 @@ Status: ⬜ belum · 🟨 berjalan · ✅ selesai · ❌ gagal/diblokir
 **Keputusan baru:** …
 **Langkah berikutnya:** …
 ```
+
+### 2026-11-10 — Refactor & Usability — Antigravity (Gemini 3.8 Flash)
+**Dikerjakan:**
+- **Penyederhanaan Akses Kios Lobi (Pilihan A)**:
+  - Berdasarkan kesepakatan diskusi dengan pengguna, mekanisme proteksi token perangkat cookie (`kiosk.device`) pada rute `/kios` dihapus/dinonaktifkan agar tidak merepotkan saat clear cache, incognito, atau pergantian browser.
+  - Rute `/kios` kini menjadi tautan terbuka langsung di browser PC/tablet lobi kantor, tetap mempertahankan formulir lengkap, pengambilan foto webcam, penomoran antrean lobi `PST-xx`, dan cetak struk thermal 58 mm.
+  - Memperbarui `routes/web.php` untuk melepaskan middleware `kiosk.device` dari grup rute `/kios`.
+  - Memperbarui unit & feature test: `tests/Feature/AcceptanceCriteriaTest.php` (`test_ac_08` disesuaikan untuk memvalidasi akses langsung tanpa token) dan `tests/Feature/GuestVisitTest.php`. Seluruh 115 test suite lulus 100% (415 assertions).
+- **Launcher Otomatis 1-Klik (`JALANKAN_WEB.bat` & Desktop Shortcut)**:
+  - Membuat script batch Windows `JALANKAN_WEB.bat` dan shortcut desktop `Buku Tamu BPS Inhil.lnk`.
+  - Mengatasi issue sintaks CMD: perbaikan karakter `&` yang terinterpretasi sebagai command separator dan proteksi variabel `%PATH%` yang memuat karakter kurung `(x86)`.
+  - Otomatisasi: deteksi binary PHP 8.3 & MySQL Laragon, pengecekan port 3306, verifikasi `.env`, peluncuran server `php artisan serve --port=8000`, serta pembukaan browser otomatis ke `http://localhost:8000`.
+- **Penyusunan & Pembaruan Dokumentasi**:
+  - Membuat panduan `PANDUAN_MENJALANKAN.md` yang merinci opsi 1-klik, prasyarat, kredensial login, dan pemetaan rute.
+  - Memperbarui `README.md` dan `docs/PRD.md` (FR-08 dan AC-8) agar konsisten dengan arsitektur akses langsung tanpa token.
+
+**Hasil:** ✅ Berhasil. Seluruh pengujian 100% hijau (115 tests passed, 415 assertions), launcher 1-klik berfungsi mulus, dan arsitektur akses disederhanakan sesuai kebutuhan operasional riil.
+**File penting:**
+- `routes/web.php`
+- `tests/Feature/AcceptanceCriteriaTest.php`
+- `tests/Feature/GuestVisitTest.php`
+- `JALANKAN_WEB.bat`
+- `PANDUAN_MENJALANKAN.md`
+- `README.md`
+- `docs/PRD.md`
+- `PROJECT_LOG.md`
+**Keputusan baru:**
+- Halaman lobi `/kios` dapat diakses langsung tanpa perlu aktivasi perangkat token admin.
+- Pemisahan tamu kantor vs tamu online murni berbasis rute: `/kios` (lobi kantor) vs `/layanan` (online dari luar kantor).
+- Pintu masuk staf kantor terpusat di `/login` dengan redirect otomatis berbasis peran (admin, resepsionis, petugas).
+**Langkah berikutnya:** Fase 8 (Persiapan deployment hosting cPanel kantor atau uji operasional LAN kantor).
 
 ### 2026-10-28 — Fase 7 — Antigravity (Gemini 3.8 Flash)
 **Dikerjakan:**
