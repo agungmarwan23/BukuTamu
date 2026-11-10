@@ -27,11 +27,6 @@
                     <div class="text-[11px] font-semibold text-amber-600">BPS KABUPATEN INDRAGIRI HILIR</div>
                 </div>
             </a>
-
-            <a href="{{ route('login') }}" class="text-xs font-semibold text-slate-600 hover:text-blue-900 transition flex items-center gap-1">
-                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>
-                <span>Masuk Petugas</span>
-            </a>
         </div>
     </header>
 

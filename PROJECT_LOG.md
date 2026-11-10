@@ -75,6 +75,10 @@ Status: ⬜ belum · 🟨 berjalan · ✅ selesai · ❌ gagal/diblokir
 - **Penyusunan & Pembaruan Dokumentasi**:
   - Membuat panduan `PANDUAN_MENJALANKAN.md` yang merinci opsi 1-klik, prasyarat, kredensial login, dan pemetaan rute.
   - Memperbarui `README.md` dan `docs/PRD.md` (FR-08 dan AC-8) agar konsisten dengan arsitektur akses langsung tanpa token.
+- **Pembersihan Tautan Publik & Redirect Logout**:
+  - Menghapus tombol/tautan "Masuk Petugas" dari header formulir publik tamu online (`resources/views/online/form.blade.php`) agar publik dari luar tidak melihat pintu masuk login staf internal.
+  - Mengubah pengalihan setelah logout pada `AuthenticatedSessionController` dari semula ke root (`/`) menjadi kembali ke halaman login (`/login`), sehingga sesi staf yang keluar tetap berada di alur kerja pegawai.
+  - Memperbarui test `test_users_can_logout` di `AuthenticationTest.php`. 115 tests tetap lulus 100%.
 
 **Hasil:** ✅ Berhasil. Seluruh pengujian 100% hijau (115 tests passed, 415 assertions), launcher 1-klik berfungsi mulus, dan arsitektur akses disederhanakan sesuai kebutuhan operasional riil.
 **File penting:**

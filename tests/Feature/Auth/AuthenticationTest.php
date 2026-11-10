@@ -106,7 +106,7 @@ class AuthenticationTest extends TestCase
         $response = $this->actingAs($user)->post('/logout');
 
         $this->assertGuest();
-        $response->assertRedirect('/');
+        $response->assertRedirect('/login');
     }
 
     public function test_guest_is_redirected_from_protected_routes(): void
